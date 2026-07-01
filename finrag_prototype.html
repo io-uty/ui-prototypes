@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinRAG — 금융 AI 문서 검색 플랫폼</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:    #0F2044;
+  --navy-m:  #1A3A6B;
+  --blue:    #1D6FD8;
+  --blue-l:  #EBF3FF;
+  --blue-m:  #2E86DE;
+  --teal:    #0EA5A0;
+  --teal-l:  #E4F8F7;
+  --gold:    #D4820A;
+  --gold-l:  #FEF4E3;
+  --green:   #16A34A;
+  --green-l: #DCFCE7;
+  --red:     #DC2626;
+  --red-l:   #FEE2E2;
+  --orange:  #EA580C;
+  --purple:  #7C3AED;
+  --purple-l:#F5F3FF;
+  --dark:    #0D1B2A;
+  --mid:     #334155;
+  --sub:     #64748B;
+  --border:  #CBD5E1;
+  --card:    #F8FAFC;
+  --white:   #FFFFFF;
+  --shadow:  0 4px 24px rgba(15,32,68,.1);
+}
+
+body {
+  font-family: -apple-system, 'Noto Sans KR', 'Segoe UI', sans-serif;
+  background: #E8EFF8;
+  color: var(--dark);
+  padding: 32px 20px 80px;
+  display: flex; flex-direction: column;
+  gap: 48px; align-items: center;
+}
+
+.browser {
+  width: 100%; max-width: 1200px;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 16px 60px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+.browser-bar {
+  background: #F1F5F9;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.browser-dots { display: flex; gap: 6px; }
+.browser-dots span { width: 12px; height: 12px; border-radius: 50%; }
+.d-r { background: #FF5F56; } .d-y { background: #FFBD2E; } .d-g { background: #27C93F; }
+.browser-url {
+  flex: 1; background: var(--white); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 12px; font-size: 12px; color: var(--sub);
+  display: flex; align-items: center; gap: 6px;
+}
+.screen-tag {
+  font-size: 11px; font-weight: 800; color: var(--navy-m);
+  letter-spacing: .08em; text-align: center; margin-bottom: 6px; text-transform: uppercase;
+}
+
+/* ── Nav ── */
+.nav {
+  background: var(--navy);
+  display: flex; align-items: center;
+  padding: 0 24px; height: 58px; gap: 0;
+}
+.nav-logo {
+  font-size: 17px; font-weight: 900; color: var(--white);
+  display: flex; align-items: center; gap: 8px; margin-right: 36px;
+}
+.nav-logo .logo-badge {
+  background: var(--blue-m); color: var(--white);
+  font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: .04em;
+}
+.nav-links { display: flex; gap: 4px; flex: 1; }
+.nav-link {
+  font-size: 13px; color: rgba(255,255,255,.6); font-weight: 600;
+  padding: 8px 14px; border-radius: 8px; cursor: pointer;
+}
+.nav-link.active { color: #fff; background: rgba(255,255,255,.1); }
+.nav-link:hover:not(.active) { color: rgba(255,255,255,.85); }
+.nav-right { display: flex; gap: 10px; align-items: center; }
+.nav-tag { background: rgba(255,255,255,.1); border-radius: 20px; padding: 4px 12px; font-size: 11px; color: rgba(255,255,255,.75); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.nav-av { width: 32px; height: 32px; border-radius: 50%; background: var(--blue-m); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #FFF; }
+
+/* ── Layout ── */
+.page { padding: 24px; }
+.btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
+.btn-primary { background: var(--blue); color: #FFF; }
+.btn-secondary { background: var(--blue-l); color: var(--blue); }
+.btn-navy { background: var(--navy); color: #FFF; }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--sub); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-xs { padding: 4px 9px; font-size: 11px; }
+
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.b-blue   { background: var(--blue-l); color: var(--blue); }
+.b-green  { background: var(--green-l); color: var(--green); }
+.b-gold   { background: var(--gold-l); color: var(--gold); }
+.b-red    { background: var(--red-l); color: var(--red); }
+.b-purple { background: var(--purple-l); color: var(--purple); }
+.b-teal   { background: var(--teal-l); color: var(--teal); }
+.b-navy   { background: rgba(15,32,68,.08); color: var(--navy); }
+
+.card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; }
+.section-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.section-hd h3 { font-size: 15px; font-weight: 800; color: var(--dark); }
+
+/* ═══════════ SCREEN 1 — 상담원 대시보드 ═══════════ */
+.s1-layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
+
+.sidebar { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 0; }
+.sb-user { padding: 0 14px 14px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+.sb-user-name { font-size: 14px; font-weight: 800; color: var(--dark); margin-bottom: 2px; }
+.sb-user-role { font-size: 11px; color: var(--blue); font-weight: 600; }
+.sb-dept { font-size: 11px; color: var(--sub); margin-top: 2px; }
+.sb-label { font-size: 10px; font-weight: 800; color: var(--sub); text-transform: uppercase; letter-spacing: .07em; padding: 8px 14px 4px; }
+.sb-item { display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-radius: 8px; margin: 0 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--mid); }
+.sb-item.active { background: var(--blue-l); color: var(--blue); font-weight: 700; }
+.sb-item:hover:not(.active) { background: #F0F4F9; }
+.sb-count { margin-left: auto; font-size: 11px; background: var(--border); color: var(--sub); padding: 2px 7px; border-radius: 20px; }
+.sb-count.alert { background: var(--blue); color: #FFF; }
+
+.s1-main { display: flex; flex-direction: column; gap: 18px; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.kpi-label { font-size: 11px; color: var(--sub); font-weight: 600; margin-bottom: 5px; }
+.kpi-val { font-size: 22px; font-weight: 900; color: var(--dark); line-height: 1; }
+.kpi-unit { font-size: 12px; color: var(--sub); margin-left: 3px; font-weight: 600; }
+.kpi-delta { font-size: 11px; font-weight: 700; margin-top: 5px; }
+.d-up { color: var(--green); } .d-dn { color: var(--red); }
+
+.quick-search-bar {
+  background: linear-gradient(135deg, var(--navy), var(--navy-m));
+  border-radius: 14px; padding: 20px 22px;
+}
+.qs-title { color: #FFF; font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.qs-sub { color: rgba(255,255,255,.6); font-size: 12px; margin-bottom: 14px; }
+.qs-input-row { display: flex; gap: 8px; }
+.qs-input {
+  flex: 1; padding: 11px 16px; border-radius: 10px;
+  border: none; font-size: 14px; color: var(--dark);
+  background: rgba(255,255,255,.95);
+}
+.qs-scope { padding: 11px 14px; border-radius: 10px; border: none; font-size: 13px; background: rgba(255,255,255,.15); color: rgba(255,255,255,.85); font-weight: 600; }
+.qs-chip-row { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
+.qs-chip { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.8); font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 20px; cursor: pointer; }
+.qs-chip:hover { background: rgba(255,255,255,.2); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.doc-list { display: flex; flex-direction: column; gap: 8px; }
+.doc-item { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.doc-icon { width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.di-pdf { background: #FFE8E8; }
+.di-xls { background: #E8FFE8; }
+.di-doc { background: #E8EEFF; }
+.doc-info { flex: 1; }
+.doc-name { font-size: 13px; font-weight: 700; color: var(--dark); }
+.doc-meta { font-size: 11px; color: var(--sub); margin-top: 2px; }
+.doc-tags { display: flex; gap: 4px; margin-top: 5px; }
+
+.hist-list { display: flex; flex-direction: column; gap: 8px; }
+.hist-item { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+.hist-item:hover { border-color: var(--blue); }
+.hist-q { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 5px; display: flex; gap: 8px; align-items: flex-start; }
+.hist-ans { font-size: 12px; color: var(--sub); line-height: 1.5; }
+.hist-src { font-size: 11px; color: var(--blue); margin-top: 5px; }
+.hist-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); margin-top: 6px; }
+
+/* ═══════════ SCREEN 2 — RAG 검색 인터페이스 (상담원) ═══════════ */
+.s2-layout { display: grid; grid-template-columns: 1fr 380px; gap: 0; min-height: 700px; }
+
+.search-panel { padding: 20px; border-right: 1px solid var(--border); }
+.search-top { margin-bottom: 16px; }
+.big-search {
+  display: flex; gap: 8px;
+  background: var(--white); border: 2px solid var(--blue); border-radius: 12px;
+  padding: 12px 16px; align-items: center;
+}
+.big-search input { flex: 1; border: none; outline: none; font-size: 15px; color: var(--dark); background: transparent; }
+.scope-tabs { display: flex; gap: 4px; margin-top: 10px; }
+.scope-tab { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); color: var(--sub); background: var(--white); }
+.scope-tab.on { background: var(--blue-l); border-color: var(--blue); color: var(--blue); }
+
+.ai-answer-card {
+  background: linear-gradient(135deg, #0F2044, #1A3A6B);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 16px;
+}
+.ai-answer-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.ai-answer-label { display: flex; align-items: center; gap: 7px; color: #FFF; font-size: 14px; font-weight: 800; }
+.ai-confid { display: flex; align-items: center; gap: 5px; background: rgba(22,163,74,.2); border-radius: 20px; padding: 4px 10px; color: #4ADE80; font-size: 11px; font-weight: 700; }
+.ai-answer-text { color: rgba(255,255,255,.9); font-size: 14px; line-height: 1.7; margin-bottom: 14px; }
+.ai-answer-text strong { color: #FFF; }
+.ai-answer-text .highlight { background: rgba(250,204,21,.2); color: #FCD34D; padding: 1px 4px; border-radius: 4px; font-weight: 700; }
+
+.cite-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.cite-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  font-size: 11px; color: rgba(255,255,255,.8); font-weight: 600;
+}
+.cite-chip:hover { background: rgba(255,255,255,.22); }
+.cite-num { background: var(--blue-m); color: #FFF; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+
+.halluc-guard { display: flex; gap: 8px; align-items: flex-start; background: rgba(22,163,74,.1); border: 1px solid rgba(22,163,74,.3); border-radius: 10px; padding: 9px 12px; }
+.hg-icon { font-size: 16px; flex-shrink: 0; }
+.hg-text { font-size: 11px; color: #86EFAC; line-height: 1.5; }
+.hg-text strong { color: #4ADE80; }
+
+.result-list { display: flex; flex-direction: column; gap: 10px; }
+.result-item { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.result-item-header {
+  display: flex; gap: 10px; align-items: center; padding: 12px 14px;
+  background: var(--card); border-bottom: 1px solid var(--border);
+}
+.result-cite-num { background: var(--blue); color: #FFF; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.result-doc-info { flex: 1; }
+.result-doc-name { font-size: 13px; font-weight: 700; color: var(--dark); }
+.result-doc-page { font-size: 11px; color: var(--sub); margin-top: 2px; }
+.result-score { text-align: right; }
+.result-score .sc-val { font-size: 14px; font-weight: 800; color: var(--blue); }
+.result-score .sc-lbl { font-size: 10px; color: var(--sub); }
+.result-excerpt { padding: 12px 14px; font-size: 13px; color: var(--mid); line-height: 1.65; }
+.result-excerpt .em { background: #FEF9C3; color: #78350F; padding: 1px 3px; border-radius: 3px; font-weight: 700; }
+.result-excerpt .em-blue { background: var(--blue-l); color: var(--blue); padding: 1px 3px; border-radius: 3px; font-weight: 700; }
+
+/* 문서 뷰어 패널 */
+.doc-viewer { background: #F8FAFC; display: flex; flex-direction: column; }
+.dv-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--white); }
+.dv-title { font-size: 13px; font-weight: 700; color: var(--dark); }
+.dv-sub { font-size: 11px; color: var(--sub); margin-top: 2px; }
+.dv-body { flex: 1; padding: 16px; overflow-y: auto; }
+.dv-page { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px; font-size: 12px; color: var(--mid); line-height: 1.8; }
+.dv-highlight { background: #FEF9C3; border-left: 3px solid var(--gold); padding: 8px 12px; border-radius: 0 6px 6px 0; margin: 8px 0; font-size: 12px; line-height: 1.7; }
+.dv-highlight strong { color: var(--orange); }
+.dv-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
+.dv-table th { background: var(--navy); color: #FFF; padding: 6px 10px; text-align: left; font-weight: 700; }
+.dv-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--mid); }
+.dv-table tr.highlight-row td { background: #FEF9C3; font-weight: 700; color: var(--dark); }
+.dv-page-nav { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.page-num-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); font-size: 12px; font-weight: 600; color: var(--sub); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.page-num-btn.on { background: var(--blue); color: #FFF; border-color: var(--blue); }
+
+/* ═══════════ SCREEN 3 — 소비자용 AI 챗봇 ═══════════ */
+.s3-layout { display: grid; grid-template-columns: 280px 1fr 300px; gap: 0; min-height: 720px; }
+
+.product-sidebar { padding: 18px; border-right: 1px solid var(--border); background: var(--card); }
+.ps-title { font-size: 14px; font-weight: 800; color: var(--dark); margin-bottom: 12px; }
+.product-item { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
+.product-item.active { border-color: var(--blue); background: var(--blue-l); }
+.product-item:hover:not(.active) { border-color: #94A3B8; }
+.pi-type { font-size: 10px; font-weight: 800; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.pi-name { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 5px; }
+.pi-rate { font-size: 15px; font-weight: 900; color: var(--blue); }
+.pi-rate span { font-size: 11px; color: var(--sub); font-weight: 600; margin-left: 2px; }
+.pi-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.faq-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.faq-chip { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; font-size: 12px; color: var(--mid); font-weight: 600; cursor: pointer; line-height: 1.4; }
+.faq-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-l); }
+
+.chat-area { display: flex; flex-direction: column; }
+.chat-header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--white); display: flex; align-items: center; gap: 12px; }
+.chat-av { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--navy)); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.chat-ai-name { font-size: 15px; font-weight: 800; color: var(--dark); }
+.chat-ai-sub  { font-size: 11px; color: var(--sub); }
+.online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.chat-messages { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; background: #F8FAFC; overflow-y: auto; }
+
+.msg-row { display: flex; gap: 10px; align-items: flex-start; }
+.msg-row.user { flex-direction: row-reverse; }
+.msg-av { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; }
+.msg-av.ai { background: linear-gradient(135deg, var(--blue), var(--navy)); color: #FFF; }
+.msg-av.user { background: #E2E8F0; color: var(--mid); font-size: 16px; }
+.msg-bubble { max-width: 82%; }
+.msg-bubble.ai .bubble-inner { background: var(--white); border: 1px solid var(--border); border-radius: 0 14px 14px 14px; padding: 12px 14px; }
+.msg-bubble.user .bubble-inner { background: var(--blue); border-radius: 14px 0 14px 14px; padding: 12px 14px; }
+.bubble-text { font-size: 13.5px; line-height: 1.7; }
+.msg-bubble.ai .bubble-text { color: var(--dark); }
+.msg-bubble.user .bubble-text { color: #FFF; }
+.bubble-time { font-size: 10px; color: var(--sub); margin-top: 4px; }
+.msg-bubble.user .bubble-time { text-align: right; }
+
+.cite-inline { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.cite-tag { display: flex; align-items: center; gap: 4px; background: var(--blue-l); border: 1px solid rgba(29,111,216,.2); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--blue); font-weight: 600; cursor: pointer; }
+
+.warn-bubble { background: var(--gold-l); border: 1px solid rgba(212,130,10,.25); border-radius: 10px; padding: 9px 12px; margin-top: 8px; font-size: 12px; color: #7A4500; line-height: 1.5; }
+.warn-bubble strong { color: var(--gold); }
+
+.explain-card { background: var(--teal-l); border: 1px solid rgba(14,165,160,.2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+.explain-card .ec-title { font-size: 12px; font-weight: 800; color: var(--teal); margin-bottom: 5px; }
+.explain-card .ec-text  { font-size: 12px; color: var(--mid); line-height: 1.6; }
+
+.table-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 8px; }
+.tc-header { padding: 8px 12px; background: var(--navy); color: #FFF; font-size: 12px; font-weight: 700; }
+.tc-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.tc-table th { background: var(--navy-m); color: rgba(255,255,255,.8); padding: 5px 10px; text-align: left; font-weight: 700; }
+.tc-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--mid); }
+.tc-table tr.em td { background: var(--blue-l); color: var(--blue); font-weight: 700; }
+
+.chat-input-area { padding: 14px 16px; border-top: 1px solid var(--border); background: var(--white); }
+.chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+.chat-input { flex: 1; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 14px; color: var(--dark); resize: none; outline: none; }
+.chat-input:focus { border-color: var(--blue); }
+.send-btn { width: 44px; height: 44px; border-radius: 12px; background: var(--blue); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+
+/* 상품 정보 패널 */
+.product-info-panel { padding: 16px; border-left: 1px solid var(--border); background: var(--card); overflow-y: auto; }
+.pip-header { margin-bottom: 14px; }
+.pip-type { font-size: 10px; font-weight: 800; color: var(--sub); text-transform: uppercase; letter-spacing: .06em; }
+.pip-name { font-size: 17px; font-weight: 900; color: var(--dark); margin-top: 4px; }
+.pip-rate { font-size: 28px; font-weight: 900; color: var(--blue); margin: 8px 0; }
+.pip-rate span { font-size: 14px; color: var(--sub); font-weight: 600; }
+.pip-highlight-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.pip-hl { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--mid); line-height: 1.5; }
+.pip-section { margin-bottom: 14px; }
+.pip-section-title { font-size: 12px; font-weight: 800; color: var(--dark); margin-bottom: 7px; }
+.pip-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pip-table td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.pip-table td:first-child { color: var(--sub); width: 50%; }
+.pip-table td:last-child { font-weight: 700; color: var(--dark); text-align: right; }
+.pip-note { background: var(--red-l); border-radius: 8px; padding: 9px 10px; font-size: 11px; color: var(--red); line-height: 1.6; }
+.pip-note strong { color: #B91C1C; }
+
+/* ═══════════ SCREEN 4 — 문서 관리 ═══════════ */
+.s4-layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+
+.doc-main { display: flex; flex-direction: column; gap: 16px; }
+.upload-zone { background: var(--blue-l); border: 2px dashed var(--blue); border-radius: 14px; padding: 24px; text-align: center; cursor: pointer; }
+.uz-icon { font-size: 36px; margin-bottom: 8px; }
+.uz-title { font-size: 15px; font-weight: 800; color: var(--blue); margin-bottom: 4px; }
+.uz-sub { font-size: 12px; color: var(--sub); }
+.uz-chips { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+
+.doc-table { width: 100%; border-collapse: collapse; }
+.doc-table th { background: var(--card); border-bottom: 2px solid var(--border); padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: var(--sub); }
+.doc-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+.doc-table tr:hover td { background: var(--card); }
+.doc-table .doc-name-cell { font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 8px; }
+.doc-status { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
+.ds-done { color: var(--green); } .ds-proc { color: var(--blue); } .ds-wait { color: var(--sub); }
+.progress-bar { height: 5px; background: #E2E8F0; border-radius: 50px; overflow: hidden; width: 80px; }
+.progress-fill { height: 100%; border-radius: 50px; background: var(--blue); }
+.action-btns { display: flex; gap: 5px; }
+
+.analytics-panel { display: flex; flex-direction: column; gap: 14px; }
+.ana-card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.ana-title { font-size: 13px; font-weight: 800; color: var(--dark); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+.stat-row { display: flex; flex-direction: column; gap: 8px; }
+.stat-item { display: flex; align-items: center; gap: 8px; }
+.stat-name { font-size: 12px; color: var(--mid); width: 100px; flex-shrink: 0; }
+.stat-track { flex: 1; height: 7px; background: #E2E8F0; border-radius: 50px; overflow: hidden; }
+.stat-fill { height: 100%; border-radius: 50px; }
+.f-blue { background: linear-gradient(90deg, var(--blue), var(--blue-m)); }
+.f-teal { background: linear-gradient(90deg, var(--teal), #38BDF8); }
+.f-purple { background: linear-gradient(90deg, var(--purple), #A78BFA); }
+.f-gold { background: linear-gradient(90deg, var(--gold), #FCD34D); }
+.stat-pct { font-size: 12px; font-weight: 700; color: var(--dark); width: 32px; text-align: right; }
+
+.chunk-list { display: flex; flex-direction: column; gap: 7px; }
+.chunk-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+.chunk-item .ci-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.chunk-item .ci-title { font-size: 12px; font-weight: 700; color: var(--dark); }
+.chunk-item .ci-text  { font-size: 11px; color: var(--sub); line-height: 1.5; }
+.embed-vis { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 8px; }
+.ev-dot { width: 8px; height: 8px; border-radius: 50%; opacity: .7; }
+
+.quality-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qg-item { background: var(--card); border-radius: 10px; padding: 11px 12px; border: 1px solid var(--border); }
+.qg-val { font-size: 20px; font-weight: 900; }
+.qg-lbl { font-size: 11px; color: var(--sub); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 — 상담원 대시보드
+═══════════════════════════════════════════ -->
+<div style="width:100%;max-width:1200px;">
+  <p class="screen-tag">① 상담원 대시보드</p>
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="browser-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
+      <div class="browser-url">🔒 finrag.bank.internal/dashboard</div>
+    </div>
+    <div class="nav">
+      <div class="nav-logo">🏦 FinRAG <div class="logo-badge">INTERNAL</div></div>
+      <div class="nav-links">
+        <a class="nav-link active">대시보드</a>
+        <a class="nav-link">AI 문서 검색</a>
+        <a class="nav-link">문서 관리</a>
+        <a class="nav-link">품질 모니터링</a>
+        <a class="nav-link">사용 현황</a>
+      </div>
+      <div class="nav-right">
+        <div class="nav-tag">🟢 시스템 정상</div>
+        <div class="nav-tag">📄 문서 1,248건</div>
+        <div class="nav-av">김</div>
+      </div>
+    </div>
+    <div class="page">
+      <div class="s1-layout">
+        <div class="sidebar">
+          <div class="sb-user">
+            <div class="sb-user-name">김민지 상담원</div>
+            <div class="sb-user-role">● 상담 진행 중</div>
+            <div class="sb-dept">개인금융영업 1팀</div>
+          </div>
+          <p class="sb-label">메뉴</p>
+          <div class="sb-item active"><span>📊</span> 대시보드</div>
+          <div class="sb-item"><span>🔍</span> AI 문서 검색 <span class="sb-count alert">NEW</span></div>
+          <div class="sb-item"><span>📂</span> 문서 라이브러리</div>
+          <div class="sb-item"><span>💬</span> 상담 이력 <span class="sb-count">24</span></div>
+          <p class="sb-label">상품 카테고리</p>
+          <div class="sb-item"><span>💰</span> 예·적금 상품</div>
+          <div class="sb-item"><span>🏠</span> 대출 상품</div>
+          <div class="sb-item"><span>📈</span> 투자 상품</div>
+          <div class="sb-item"><span>🛡️</span> 보험 상품</div>
+          <p class="sb-label">관리</p>
+          <div class="sb-item"><span>📋</span> 준법심의 가이드</div>
+          <div class="sb-item"><span>⚠️</span> 불완전판매 방지</div>
+          <div class="sb-item"><span>📡</span> 할루시네이션 로그</div>
+        </div>
+
+        <div class="s1-main">
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="kpi-label">오늘 AI 검색 횟수</div>
+              <div><span class="kpi-val">847</span><span class="kpi-unit">건</span></div>
+              <div class="kpi-delta d-up">▲ 12.4% 어제 대비</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">평균 응답 시간</div>
+              <div><span class="kpi-val">1.8</span><span class="kpi-unit">초</span></div>
+              <div class="kpi-delta d-up">▲ 기존 대비 95% 단축</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">AI 답변 정확도</div>
+              <div><span class="kpi-val">98.3</span><span class="kpi-unit">%</span></div>
+              <div class="kpi-delta d-up">출처 인용 기반</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">할루시네이션 차단</div>
+              <div><span class="kpi-val">14</span><span class="kpi-unit">건</span></div>
+              <div class="kpi-delta d-up">이번 달 금융사고 0건</div>
+            </div>
+          </div>
+
+          <div class="quick-search-bar">
+            <div class="qs-title">🔍 AI 문서 검색 — 자연어로 물어보세요</div>
+            <div class="qs-sub">약관·심사 가이드·공시서류를 즉시 검색합니다. Ctrl+F 없이 수백 페이지를 1.8초 안에.</div>
+            <div class="qs-input-row">
+              <input class="qs-input" type="text" placeholder="예: 주택담보대출 중도상환수수료 면제 조건이 뭔가요?">
+              <select class="qs-scope"><option>전체 문서</option><option>대출 약관</option><option>예적금</option><option>투자상품</option></select>
+              <button class="btn" style="background:var(--gold);color:var(--navy);font-size:14px;padding:11px 20px;">검색</button>
+            </div>
+            <div class="qs-chip-row">
+              <div class="qs-chip">💡 중도상환수수료 면제 조건</div>
+              <div class="qs-chip">💡 DSR 계산 방법</div>
+              <div class="qs-chip">💡 예금자보호 한도 예외</div>
+              <div class="qs-chip">💡 맞벌이 소득 합산 기준</div>
+              <div class="qs-chip">💡 ELS 원금비보장 설명 의무</div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <div class="section-hd">
+                <h3>📂 최근 등록 문서</h3>
+                <button class="btn btn-secondary btn-sm">전체 보기</button>
+              </div>
+              <div class="doc-list">
+                <div class="doc-item">
+                  <div class="doc-icon di-pdf">📄</div>
+                  <div class="doc-info">
+                    <div class="doc-name">2025년 주택담보대출 표준약관 v3.2</div>
+                    <div class="doc-meta">248페이지 · 2025.06.28 갱신 · 1,420 청크</div>
+                    <div class="doc-tags"><span class="badge b-green">임베딩 완료</span><span class="badge b-blue">대출 약관</span></div>
+                  </div>
+                  <button class="btn btn-outline btn-xs">검색</button>
+                </div>
+                <div class="doc-item">
+                  <div class="doc-icon di-pdf">📄</div>
+                  <div class="doc-info">
+                    <div class="doc-name">신용대출 심사 내부 가이드라인 Q3</div>
+                    <div class="doc-meta">86페이지 · 2025.07.01 · 620 청크</div>
+                    <div class="doc-tags"><span class="badge b-blue">임베딩 중 78%</span><span class="badge b-navy">대출 심사</span></div>
+                  </div>
+                  <button class="btn btn-outline btn-xs">대기</button>
+                </div>
+                <div class="doc-item">
+                  <div class="doc-icon di-xls">📊</div>
+                  <div class="doc-info">
+                    <div class="doc-name">금리 공시표 2025년 7월</div>
+                    <div class="doc-meta">3페이지 · 표 데이터 48개 · 특수 파서 적용</div>
+                    <div class="doc-tags"><span class="badge b-green">임베딩 완료</span><span class="badge b-teal">표 파싱</span></div>
+                  </div>
+                  <button class="btn btn-outline btn-xs">검색</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="section-hd">
+                <h3>🕐 최근 AI 검색 이력</h3>
+                <button class="btn btn-secondary btn-sm">전체 이력</button>
+              </div>
+              <div class="hist-list">
+                <div class="hist-item">
+                  <div class="hist-q"><span class="badge b-blue">Q</span>주담대 중도상환 3년 이내 면제 예외 조건?</div>
+                  <div class="hist-ans">이사·실직·질병 등 부득이한 사유 발생 시 중도상환수수료 전액 면제 가능. 증빙서류 제출 필요.</div>
+                  <div class="hist-src">📄 표준약관 p.47 · 신뢰도 99.1%</div>
+                  <div class="hist-meta"><span>김민지 · 10분 전</span><span class="badge b-green">검증 완료</span></div>
+                </div>
+                <div class="hist-item">
+                  <div class="hist-q"><span class="badge b-blue">Q</span>DSR 산정 시 전세대출 포함 여부?</div>
+                  <div class="hist-ans">임차보증금 반환 목적 전세대출은 DSR 산정 시 분모(연간 소득)에만 반영, 분자 제외.</div>
+                  <div class="hist-src">📄 여신심사 가이드 p.22 · 신뢰도 97.4%</div>
+                  <div class="hist-meta"><span>김민지 · 34분 전</span><span class="badge b-green">검증 완료</span></div>
+                </div>
+                <div class="hist-item">
+                  <div class="hist-q"><span class="badge b-red">⚠</span>비상장주식 편입 ELS 원금보장 여부?</div>
+                  <div class="hist-ans">해당 문서에 명확한 근거 없음. 답변 생성 거부 — 준법심의팀 확인 필요.</div>
+                  <div class="hist-src">⚠️ 할루시네이션 방지 작동</div>
+                  <div class="hist-meta"><span>박준호 · 1시간 전</span><span class="badge b-red">검증 불가</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 — RAG 검색 인터페이스 (상담원)
+═══════════════════════════════════════════ -->
+<div style="width:100%;max-width:1200px;">
+  <p class="screen-tag">② AI 문서 검색 인터페이스 (상담원용 RAG)</p>
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="browser-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
+      <div class="browser-url">🔒 finrag.bank.internal/search</div>
+    </div>
+    <div class="nav">
+      <div class="nav-logo">🏦 FinRAG <div class="logo-badge">INTERNAL</div></div>
+      <div class="nav-links">
+        <a class="nav-link">대시보드</a>
+        <a class="nav-link active">AI 문서 검색</a>
+        <a class="nav-link">문서 관리</a>
+        <a class="nav-link">품질 모니터링</a>
+      </div>
+      <div class="nav-right"><div class="nav-av">김</div></div>
+    </div>
+    <div class="s2-layout">
+
+      <!-- 검색 + 결과 패널 -->
+      <div class="search-panel">
+        <div class="search-top">
+          <div class="big-search">
+            <span style="font-size:18px;">🔍</span>
+            <input type="text" value="주택담보대출 중도상환수수료 면제 조건">
+            <button class="btn btn-primary btn-sm">검색</button>
+          </div>
+          <div class="scope-tabs">
+            <div class="scope-tab on">전체 문서</div>
+            <div class="scope-tab">대출 약관</div>
+            <div class="scope-tab">심사 가이드</div>
+            <div class="scope-tab">금리 공시표</div>
+            <div class="scope-tab">준법 가이드</div>
+          </div>
+        </div>
+
+        <!-- AI 종합 답변 -->
+        <div class="ai-answer-card">
+          <div class="ai-answer-header">
+            <div class="ai-answer-label">
+              <span style="font-size:18px;">🤖</span> AI 종합 답변
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="ai-confid">✅ 신뢰도 99.1%</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.5);">응답 1.6초</div>
+            </div>
+          </div>
+          <div class="ai-answer-text">
+            주택담보대출의 중도상환수수료는 대출 실행일로부터 <span class="highlight">3년 이내</span> 상환 시 부과됩니다. 다만, 아래 사유 발생 시 <strong>수수료 전액 면제</strong>가 가능합니다.<br><br>
+            ① 담보주택 매각 후 이사하는 경우 (실거주 목적 매각 확인서 필요)<br>
+            ② 차주의 실직·폐업으로 인한 소득 중단 시 (고용보험 수급 확인서)<br>
+            ③ 차주 또는 동거 가족의 <strong>6개월 이상 입원 치료</strong>가 필요한 중증 질환 진단<br>
+            ④ 대출 실행 후 <span class="highlight">금리 인하 요구권</span> 행사로 금리 변경 시
+          </div>
+          <div class="cite-row">
+            <div class="cite-chip"><div class="cite-num">1</div> 표준약관 §14 p.47</div>
+            <div class="cite-chip"><div class="cite-num">2</div> 여신심사가이드 p.33</div>
+            <div class="cite-chip"><div class="cite-num">3</div> 소비자보호지침 §8</div>
+          </div>
+          <div class="halluc-guard">
+            <div class="hg-icon">🛡️</div>
+            <div class="hg-text"><strong>할루시네이션 방지 작동:</strong> 위 답변의 모든 내용은 인용된 문서에서 직접 추출되었습니다. 문서 근거가 없는 내용은 포함되지 않았습니다.</div>
+          </div>
+        </div>
+
+        <!-- 원문 검색 결과 -->
+        <div class="section-hd" style="margin-bottom:10px;">
+          <h3>📄 원문 검색 결과 (3건)</h3>
+          <div style="font-size:12px;color:var(--sub);">관련 문서 클릭 시 우측 뷰어에서 확인</div>
+        </div>
+        <div class="result-list">
+          <div class="result-item">
+            <div class="result-item-header">
+              <div class="result-cite-num">1</div>
+              <div class="result-doc-info">
+                <div class="result-doc-name">주택담보대출 표준약관 v3.2</div>
+                <div class="result-doc-page">제14조 중도상환수수료 · p.47 / 248p</div>
+              </div>
+              <div class="result-score"><div class="sc-val">0.97</div><div class="sc-lbl">코사인 유사도</div></div>
+            </div>
+            <div class="result-excerpt">
+              …제14조(중도상환수수료) ① 차주가 대출 실행일로부터 <span class="em">3년 이내</span>에 원금의 전부 또는 일부를 상환하는 경우 중도상환수수료를 부과한다. 단, 다음 각 호에 해당하는 경우 <span class="em">수수료를 면제</span>한다. 1호. 담보물 매각을 통한 이주…
+            </div>
+          </div>
+          <div class="result-item">
+            <div class="result-item-header">
+              <div class="result-cite-num">2</div>
+              <div class="result-doc-info">
+                <div class="result-doc-name">여신심사 내부 가이드라인 Q3-2025</div>
+                <div class="result-doc-page">중도상환 면제 심사 기준 · p.33 / 86p</div>
+              </div>
+              <div class="result-score"><div class="sc-val">0.91</div><div class="sc-lbl">코사인 유사도</div></div>
+            </div>
+            <div class="result-excerpt">
+              중도상환수수료 면제 신청 시 심사역은 <span class="em-blue">면제 사유별 구비서류</span>를 확인해야 합니다. 실직의 경우 <span class="em">고용보험 수급자격 확인서</span> 원본, 질병의 경우 주치의 소견서 및 진단서(6개월 이상 입원 기재)…
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 문서 뷰어 -->
+      <div class="doc-viewer">
+        <div class="dv-header">
+          <div>
+            <div class="dv-title">📄 주택담보대출 표준약관 v3.2</div>
+            <div class="dv-sub">p.47 / 248페이지 · 제14조 중도상환수수료 — 관련 구절 하이라이트</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-outline btn-xs">⬆ 이전</button>
+            <button class="btn btn-primary btn-xs">⬇ 다음</button>
+          </div>
+        </div>
+        <div class="dv-body">
+          <div class="dv-page">
+            <div style="font-size:11px;color:var(--sub);margin-bottom:10px;">제 14 조 (중도상환수수료)</div>
+            <p>① 차주가 대출 실행일로부터 3년 이내에 원금의 전부 또는 일부를 상환하고자 하는 경우, 금융기관은 아래 산식에 따른 중도상환수수료를 부과한다.</p>
+            <br>
+            <table class="dv-table">
+              <thead><tr><th>잔여기간</th><th>수수료율</th><th>비고</th></tr></thead>
+              <tbody>
+                <tr><td>36개월 이상</td><td>0.00%</td><td>면제</td></tr>
+                <tr class="highlight-row"><td>24~36개월 미만</td><td>0.60%</td><td>잔액×요율×잔여일/365</td></tr>
+                <tr><td>12~24개월 미만</td><td>1.20%</td><td></td></tr>
+                <tr><td>12개월 미만</td><td>1.50%</td><td>최고 한도</td></tr>
+              </tbody>
+            </table>
+            <br>
+            <div class="dv-highlight">
+              <strong>② 단, 다음 각 호에 해당하는 경우 수수료를 면제한다 (AI 검색 결과 근거 구절):</strong><br>
+              1호. 담보주택 매각을 통한 이주 목적 상환 (실거주 확인서 제출 시)<br>
+              2호. 실직·폐업으로 인한 소득 중단 (고용보험 수급자격 확인서 필요)<br>
+              3호. 차주 또는 동거 가족 중증 질환 진단 (6개월 이상 입원 치료 필요)<br>
+              4호. 금리 인하 요구권 행사에 따른 금리 변경 시
+            </div>
+            <p>③ 제2항의 면제 신청은 수수료 부과 전 영업점에 서면으로 제출하여야 하며, 관련 증빙서류 일체를 첨부하여야 한다…</p>
+          </div>
+          <div class="dv-page-nav">
+            <div class="page-num-btn">45</div>
+            <div class="page-num-btn">46</div>
+            <div class="page-num-btn on">47</div>
+            <div class="page-num-btn">48</div>
+            <div class="page-num-btn">49</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3 — 소비자용 AI 챗봇
+═══════════════════════════════════════════ -->
+<div style="width:100%;max-width:1200px;">
+  <p class="screen-tag">③ 소비자용 AI 금융 상담 챗봇 (대외 서비스)</p>
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="browser-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
+      <div class="browser-url">🔒 www.ourbank.co.kr/ai-advisor</div>
+    </div>
+    <div class="nav" style="background:#0D2137;">
+      <div class="nav-logo">🏦 OurBank <div class="logo-badge" style="background:var(--gold);">AI 상담</div></div>
+      <div class="nav-links">
+        <a class="nav-link">예·적금</a>
+        <a class="nav-link">대출</a>
+        <a class="nav-link">투자</a>
+        <a class="nav-link active">AI 상담</a>
+        <a class="nav-link">고객센터</a>
+      </div>
+      <div class="nav-right">
+        <div class="nav-tag">📱 앱 전환</div>
+        <div class="nav-av" style="background:var(--gold);color:var(--navy);">이</div>
+      </div>
+    </div>
+
+    <div class="s3-layout">
+
+      <!-- 상품 선택 패널 -->
+      <div class="product-sidebar">
+        <div class="ps-title">📋 상품 선택</div>
+        <div class="product-item active">
+          <div class="pi-type">예금 상품</div>
+          <div class="pi-name">스마트 정기예금</div>
+          <div class="pi-rate">연 3.85%<span>(1년 기준)</span></div>
+          <div class="pi-tags"><span class="badge b-blue">5천만 보호</span><span class="badge b-green">비대면 우대</span></div>
+        </div>
+        <div class="product-item">
+          <div class="pi-type">적금 상품</div>
+          <div class="pi-name">급여 자유적금</div>
+          <div class="pi-rate">연 4.20%<span>(12개월)</span></div>
+          <div class="pi-tags"><span class="badge b-gold">급여이체 우대</span></div>
+        </div>
+        <div class="product-item">
+          <div class="pi-type">대출 상품</div>
+          <div class="pi-name">직장인 신용대출</div>
+          <div class="pi-rate">연 4.9~8.5%</div>
+          <div class="pi-tags"><span class="badge b-purple">최대 1억</span></div>
+        </div>
+        <div style="margin-top:14px;">
+          <div style="font-size:12px;font-weight:800;color:var(--mid);margin-bottom:8px;">자주 묻는 질문</div>
+          <div class="faq-chips">
+            <div class="faq-chip">💰 이자는 어떻게 계산되나요?</div>
+            <div class="faq-chip">📅 중도 해지 시 이자는?</div>
+            <div class="faq-chip">🛡️ 예금자 보호 범위는?</div>
+            <div class="faq-chip">🔄 자동 재예치 조건</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 채팅 영역 -->
+      <div class="chat-area">
+        <div class="chat-header">
+          <div class="chat-av">🤖</div>
+          <div>
+            <div class="chat-ai-name">AI 금융 상담사 <span style="font-size:12px;color:var(--sub);">by FinRAG</span></div>
+            <div style="display:flex;align-items:center;gap:5px;margin-top:2px;"><div class="online-dot"></div><div class="chat-ai-sub">약관 기반 답변 · 24시간 응대</div></div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-sm">🔊 음성</button>
+            <button class="btn btn-outline btn-sm">📞 상담원 연결</button>
+          </div>
+        </div>
+
+        <div class="chat-messages">
+          <!-- AI 인사 -->
+          <div class="msg-row">
+            <div class="msg-av ai">🤖</div>
+            <div class="msg-bubble ai">
+              <div class="bubble-inner">
+                <div class="bubble-text">안녕하세요! 저는 OurBank AI 금융 상담사입니다 😊<br>
+                스마트 정기예금에 대해 궁금하신 점을 편하게 물어보세요. 약관을 바탕으로 정확한 정보를 알려드릴게요.</div>
+              </div>
+              <div class="bubble-time">오후 2:30</div>
+            </div>
+          </div>
+
+          <!-- 사용자 질문 1 -->
+          <div class="msg-row user">
+            <div class="msg-av user">👤</div>
+            <div class="msg-bubble user">
+              <div class="bubble-inner">
+                <div class="bubble-text">정기예금 중간에 해지하면 이자를 얼마나 받을 수 있나요?</div>
+              </div>
+              <div class="bubble-time">오후 2:31</div>
+            </div>
+          </div>
+
+          <!-- AI 답변 1 (표 포함) -->
+          <div class="msg-row">
+            <div class="msg-av ai">🤖</div>
+            <div class="msg-bubble ai">
+              <div class="bubble-inner">
+                <div class="bubble-text">
+                  중도 해지 시에는 <strong>약정 이율보다 낮은 중도해지 이율</strong>이 적용돼요. 가입 기간에 따라 아래처럼 달라집니다 📋
+                </div>
+                <div class="table-card">
+                  <div class="tc-header">📊 스마트 정기예금 중도해지 이율표</div>
+                  <table class="tc-table">
+                    <thead><tr><th>경과 기간</th><th>적용 이율</th><th>예시 (1,000만원)</th></tr></thead>
+                    <tbody>
+                      <tr><td>1개월 미만</td><td>연 0.10%</td><td>약 833원</td></tr>
+                      <tr><td>3개월 미만</td><td>연 0.50%</td><td>약 12,500원</td></tr>
+                      <tr><td>6개월 미만</td><td>연 1.50%</td><td>약 75,000원</td></tr>
+                      <tr class="em"><td>6개월 이상</td><td>연 2.20%</td><td>약 110,000원</td></tr>
+                      <tr><td>만기 (1년)</td><td>연 3.85%</td><td>약 385,000원</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="cite-inline">
+                  <div class="cite-tag">📄 스마트 정기예금 약관 p.8</div>
+                  <div class="cite-tag">📄 금리 공시표 2025.07</div>
+                </div>
+                <div class="warn-bubble">
+                  ⚠️ <strong>알아두세요:</strong> 중도 해지 시 이자소득세(15.4%)는 실제 지급 이자에서 공제됩니다. 최소 <strong>6개월 이상</strong> 유지하시면 더 유리합니다!
+                </div>
+              </div>
+              <div class="bubble-time">오후 2:31</div>
+            </div>
+          </div>
+
+          <!-- 사용자 질문 2 -->
+          <div class="msg-row user">
+            <div class="msg-av user">👤</div>
+            <div class="msg-bubble user">
+              <div class="bubble-inner">
+                <div class="bubble-text">예금자 보호는 어떻게 되나요? 5천만 원 넘어도 보호되나요?</div>
+              </div>
+              <div class="bubble-time">오후 2:33</div>
+            </div>
+          </div>
+
+          <!-- AI 답변 2 (전문 용어 해설 포함) -->
+          <div class="msg-row">
+            <div class="msg-av ai">🤖</div>
+            <div class="msg-bubble ai">
+              <div class="bubble-inner">
+                <div class="bubble-text">
+                  예금자보호제도에 대해 쉽게 설명해 드릴게요! 🛡️<br><br>
+                  <strong>한 금융기관당 1인 기준 최대 5,000만 원</strong>까지 보호됩니다. 5천만 원을 초과하는 금액은 보호 대상이 아니에요.
+                </div>
+                <div class="explain-card">
+                  <div class="ec-title">💡 "예금자보호제도"란?</div>
+                  <div class="ec-text">금융기관이 파산하더라도 예금보험공사가 예금자 대신 5,000만 원 한도로 원금과 이자를 대신 지급해 주는 제도입니다. 원금 + 이자 합산 금액 기준이에요.</div>
+                </div>
+                <div class="bubble-text" style="margin-top:8px;">
+                  5천만 원이 넘는 자산을 보호받으려면 <strong>여러 은행에 분산 예치</strong>하시는 것을 추천드려요 😊
+                </div>
+                <div class="cite-inline">
+                  <div class="cite-tag">📄 예금자보호법 §32</div>
+                  <div class="cite-tag">📄 상품설명서 p.3</div>
+                </div>
+              </div>
+              <div class="bubble-time">오후 2:33</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <div class="faq-chip" style="font-size:11px;padding:5px 10px;cursor:pointer;">💡 자동 재예치 조건?</div>
+            <div class="faq-chip" style="font-size:11px;padding:5px 10px;cursor:pointer;">💡 비대면 우대금리 조건?</div>
+            <div class="faq-chip" style="font-size:11px;padding:5px 10px;cursor:pointer;">💡 세금 우대 적용 가능?</div>
+          </div>
+          <div class="chat-input-row">
+            <textarea class="chat-input" rows="2" placeholder="약관 내용, 금리, 수수료 등 궁금한 점을 물어보세요…"></textarea>
+            <button class="send-btn">➤</button>
+          </div>
+          <div style="font-size:11px;color:var(--sub);margin-top:6px;text-align:center;">
+            🛡️ 모든 답변은 공식 약관·공시서류 기반 · 금융 사고 방지 AI 검증 적용
+          </div>
+        </div>
+      </div>
+
+      <!-- 상품 정보 패널 -->
+      <div class="product-info-panel">
+        <div class="pip-header">
+          <div class="pip-type">📋 예금 상품 · 상품설명서</div>
+          <div class="pip-name">스마트 정기예금</div>
+          <div class="pip-rate">연 3.85%<span> (1년 · 세전)</span></div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">
+            <span class="badge b-green">예금자보호</span>
+            <span class="badge b-blue">비대면 우대 +0.1%</span>
+            <span class="badge b-gold">급여이체 우대</span>
+          </div>
+        </div>
+
+        <div class="pip-highlight-list">
+          <div class="pip-hl"><span>✅</span>가입 기간: 1개월 ~ 3년 (1개월 단위)</div>
+          <div class="pip-hl"><span>✅</span>가입 금액: 최소 100만원 ~ 최대 5억원</div>
+          <div class="pip-hl"><span>✅</span>이자 지급: 만기일시지급 또는 월이자지급</div>
+          <div class="pip-hl"><span>⚠️</span>중도해지 시 약정금리 미적용</div>
+        </div>
+
+        <div class="pip-section">
+          <div class="pip-section-title">금리 상세</div>
+          <table class="pip-table">
+            <tr><td>기본 금리</td><td>연 3.65%</td></tr>
+            <tr><td>비대면 우대</td><td>+0.10%p</td></tr>
+            <tr><td>급여이체 우대</td><td>+0.10%p</td></tr>
+            <tr style="border-top:2px solid var(--border);"><td>최대 적용 금리</td><td style="color:var(--blue);font-size:15px;">연 3.85%</td></tr>
+          </table>
+        </div>
+
+        <div class="pip-section">
+          <div class="pip-section-title">세금 및 보호</div>
+          <table class="pip-table">
+            <tr><td>이자 과세</td><td>15.4% (소득세+주민세)</td></tr>
+            <tr><td>비과세 한도</td><td>장기저축성 비해당</td></tr>
+            <tr><td>예금자보호</td><td>5,000만원 한도</td></tr>
+          </table>
+        </div>
+
+        <div class="pip-note">
+          ⚠️ <strong>투자 유의:</strong> 이 상품은 원금 및 이자가 「예금자보호법」에 의해 보호되나, <strong>5,000만 원 초과분은 보호 대상이 아닙니다.</strong> 가입 전 상품설명서를 반드시 읽어보세요.
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px;font-size:14px;">🖊️ 지금 가입하기</button>
+        <button class="btn btn-outline" style="width:100%;margin-top:6px;padding:12px;font-size:13px;">📄 약관 전체 보기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4 — 문서 관리 + RAG 파이프라인
+═══════════════════════════════════════════ -->
+<div style="width:100%;max-width:1200px;">
+  <p class="screen-tag">④ 문서 관리 + RAG 파이프라인 현황</p>
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="browser-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
+      <div class="browser-url">🔒 finrag.bank.internal/documents</div>
+    </div>
+    <div class="nav">
+      <div class="nav-logo">🏦 FinRAG <div class="logo-badge">INTERNAL</div></div>
+      <div class="nav-links">
+        <a class="nav-link">대시보드</a>
+        <a class="nav-link">AI 문서 검색</a>
+        <a class="nav-link active">문서 관리</a>
+        <a class="nav-link">품질 모니터링</a>
+      </div>
+      <div class="nav-right"><div class="nav-av">관</div></div>
+    </div>
+    <div class="page">
+      <div class="s4-layout">
+        <div class="doc-main">
+
+          <!-- 업로드 -->
+          <div class="upload-zone">
+            <div class="uz-icon">⬆️</div>
+            <div class="uz-title">문서 업로드</div>
+            <div class="uz-sub">PDF, Word, Excel, HWP 지원 · 최대 500MB · 자동 청킹 + 임베딩</div>
+            <div class="uz-chips">
+              <span class="badge b-blue">PDF</span>
+              <span class="badge b-green">DOCX</span>
+              <span class="badge b-teal">XLSX</span>
+              <span class="badge b-gold">HWP</span>
+              <span class="badge b-navy">표 자동 파싱</span>
+            </div>
+          </div>
+
+          <!-- 문서 목록 -->
+          <div class="card" style="overflow:hidden;">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+              <h3 style="font-size:15px;font-weight:800;color:var(--dark);">📂 문서 라이브러리 (1,248건)</h3>
+              <div style="display:flex;gap:8px;">
+                <input style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;width:200px;" placeholder="🔍 문서 검색…">
+                <select style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;"><option>전체 카테고리</option></select>
+              </div>
+            </div>
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th>문서명</th><th>카테고리</th><th>페이지</th><th>청크 수</th><th>상태</th><th>갱신일</th><th>관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="doc-name-cell">📄 주택담보대출 표준약관 v3.2</div></td>
+                  <td><span class="badge b-navy">대출 약관</span></td>
+                  <td>248p</td>
+                  <td>1,420</td>
+                  <td><div class="doc-status ds-done">✅ 완료</div></td>
+                  <td style="font-size:12px;color:var(--sub);">2025.06.28</td>
+                  <td><div class="action-btns"><button class="btn btn-outline btn-xs">테스트</button><button class="btn btn-secondary btn-xs">갱신</button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="doc-name-cell">📊 신용대출 심사 가이드 Q3</div></td>
+                  <td><span class="badge b-blue">심사 기준</span></td>
+                  <td>86p</td>
+                  <td>620</td>
+                  <td>
+                    <div class="doc-status ds-proc">⚙️ 처리 중</div>
+                    <div class="progress-bar" style="margin-top:4px;"><div class="progress-fill" style="width:78%"></div></div>
+                    <div style="font-size:10px;color:var(--sub);margin-top:2px;">78% 완료</div>
+                  </td>
+                  <td style="font-size:12px;color:var(--sub);">2025.07.01</td>
+                  <td><div class="action-btns"><button class="btn btn-outline btn-xs">취소</button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="doc-name-cell">📊 금리 공시표 2025년 7월</div></td>
+                  <td><span class="badge b-teal">금리 공시</span></td>
+                  <td>3p</td>
+                  <td>48</td>
+                  <td><div class="doc-status ds-done">✅ 완료</div></td>
+                  <td style="font-size:12px;color:var(--sub);">2025.07.01</td>
+                  <td><div class="action-btns"><button class="btn btn-outline btn-xs">테스트</button><button class="btn btn-secondary btn-xs">갱신</button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="doc-name-cell">📄 ELS 투자설명서 (원금비보장형)</div></td>
+                  <td><span class="badge b-purple">투자 상품</span></td>
+                  <td>64p</td>
+                  <td>390</td>
+                  <td><div class="doc-status ds-done">✅ 완료</div></td>
+                  <td style="font-size:12px;color:var(--sub);">2025.06.15</td>
+                  <td><div class="action-btns"><button class="btn btn-outline btn-xs">테스트</button><button class="btn btn-red btn-xs" style="background:var(--red-l);color:var(--red);font-size:11px;padding:4px 9px;border-radius:6px;border:none;cursor:pointer;">삭제</button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="doc-name-cell">📄 소비자보호 업무지침 2025</div></td>
+                  <td><span class="badge b-gold">준법 가이드</span></td>
+                  <td>122p</td>
+                  <td>880</td>
+                  <td><div class="doc-status ds-wait">⏳ 대기 중</div></td>
+                  <td style="font-size:12px;color:var(--sub);">2025.07.01</td>
+                  <td><div class="action-btns"><button class="btn btn-primary btn-xs">시작</button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 분석 패널 -->
+        <div class="analytics-panel">
+
+          <div class="ana-card">
+            <div class="ana-title">📈 RAG 파이프라인 현황</div>
+            <div class="quality-grid">
+              <div class="qg-item">
+                <div class="qg-val" style="color:var(--green);">98.3%</div>
+                <div class="qg-lbl">답변 정확도</div>
+              </div>
+              <div class="qg-item">
+                <div class="qg-val" style="color:var(--blue);">1.8초</div>
+                <div class="qg-lbl">평균 응답</div>
+              </div>
+              <div class="qg-item">
+                <div class="qg-val" style="color:var(--purple);">0.91</div>
+                <div class="qg-lbl">평균 유사도</div>
+              </div>
+              <div class="qg-item">
+                <div class="qg-val" style="color:var(--gold);">14건</div>
+                <div class="qg-lbl">할루시 차단</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ana-card">
+            <div class="ana-title">🔍 카테고리별 검색 비중</div>
+            <div class="stat-row">
+              <div class="stat-item">
+                <div class="stat-name">대출 약관</div>
+                <div class="stat-track"><div class="stat-fill f-blue" style="width:42%"></div></div>
+                <div class="stat-pct">42%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-name">예적금 상품</div>
+                <div class="stat-track"><div class="stat-fill f-teal" style="width:28%"></div></div>
+                <div class="stat-pct">28%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-name">투자 상품</div>
+                <div class="stat-track"><div class="stat-fill f-purple" style="width:18%"></div></div>
+                <div class="stat-pct">18%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-name">준법 가이드</div>
+                <div class="stat-track"><div class="stat-fill f-gold" style="width:12%"></div></div>
+                <div class="stat-pct">12%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ana-card">
+            <div class="ana-title">🧩 청크 품질 샘플</div>
+            <div class="chunk-list">
+              <div class="chunk-item">
+                <div class="ci-hd">
+                  <div class="ci-title">약관 §14 — 중도상환수수료</div>
+                  <span class="badge b-green">품질 A+</span>
+                </div>
+                <div class="ci-text">중도상환 면제 조건 및 수수료율 산식 포함 — 표 데이터 구조화 완료</div>
+                <div class="embed-vis">
+                  <div class="ev-dot" style="background:#2563EB;width:12px;height:6px;border-radius:3px;"></div>
+                  <div class="ev-dot" style="background:#16A34A;"></div>
+                  <div class="ev-dot" style="background:#7C3AED;"></div>
+                  <div style="font-size:10px;color:var(--sub);margin-left:4px;">임베딩 벡터 시각화</div>
+                </div>
+              </div>
+              <div class="chunk-item">
+                <div class="ci-hd">
+                  <div class="ci-title">금리 공시표 — 상품별 금리</div>
+                  <span class="badge b-blue">표 파싱</span>
+                </div>
+                <div class="ci-text">Excel 표 → 구조화 텍스트 변환 완료 · 총 48개 셀 인식</div>
+              </div>
+              <div class="chunk-item">
+                <div class="ci-hd">
+                  <div class="ci-title">ELS 설명서 — 원금손실 구간</div>
+                  <span class="badge b-red">고위험 플래그</span>
+                </div>
+                <div class="ci-text">원금비보장 관련 청크 — 답변 시 자동 경고 삽입 설정됨</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ana-card">
+            <div class="ana-title">🛡️ 할루시네이션 방지 설정</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--green-l);border-radius:8px;">
+                <span style="font-size:12px;font-weight:700;color:var(--green);">✅ 출처 인용 강제</span>
+                <span class="badge b-green">ON</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--green-l);border-radius:8px;">
+                <span style="font-size:12px;font-weight:700;color:var(--green);">✅ 근거 없으면 답변 거부</span>
+                <span class="badge b-green">ON</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--green-l);border-radius:8px;">
+                <span style="font-size:12px;font-weight:700;color:var(--green);">✅ 고위험 상품 경고 자동 삽입</span>
+                <span class="badge b-green">ON</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--gold-l);border-radius:8px;">
+                <span style="font-size:12px;font-weight:700;color:var(--gold);">⚠️ 낮은 신뢰도 답변 플래그</span>
+                <span class="badge b-gold">임계값 90%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
