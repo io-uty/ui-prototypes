@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HandyCoach — AI 필기 코치</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --purple:  #7C3AED;
+  --purple-d:#5B21B6;
+  --purple-l:#F5F3FF;
+  --violet:  #A855F7;
+  --pink:    #EC4899;
+  --pink-l:  #FDF2F8;
+  --orange:  #F97316;
+  --orange-l:#FFF7ED;
+  --yellow:  #EAB308;
+  --yellow-l:#FEFCE8;
+  --green:   #16A34A;
+  --green-l: #DCFCE7;
+  --blue:    #2563EB;
+  --blue-l:  #EFF6FF;
+  --teal:    #0891B2;
+  --red:     #DC2626;
+  --red-l:   #FEF2F2;
+  --dark:    #1E1B4B;
+  --mid:     #4C1D95;
+  --sub:     #7C3AED99;
+  --border:  #DDD6FE;
+  --card:    #FAFAFA;
+  --white:   #FFFFFF;
+  --shadow:  0 8px 32px rgba(124,58,237,.15);
+}
+
+body {
+  font-family: -apple-system, 'Noto Sans KR', 'Nunito', sans-serif;
+  background: #EDE9FE;
+  padding: 32px 16px 80px;
+  display: flex; flex-direction: column;
+  gap: 48px; align-items: center;
+}
+
+/* ── 태블릿 껍데기 (iPad 느낌) ── */
+.tablet {
+  width: 768px;
+  min-height: 600px;
+  background: var(--white);
+  border-radius: 24px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.20), 0 0 0 10px #2D2D3A;
+  overflow: hidden;
+  position: relative;
+  display: flex; flex-direction: column;
+}
+.tablet-bar {
+  background: #2D2D3A;
+  height: 32px; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 20px;
+}
+.tablet-bar .t-cam { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+.tablet-bar .t-time { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.7); }
+.tablet-bar .t-right { display: flex; gap: 6px; font-size: 12px; color: rgba(255,255,255,.6); }
+
+.screen-tag {
+  font-size: 11px; font-weight: 800; color: var(--purple);
+  letter-spacing: .08em; text-align: center;
+  margin-bottom: 6px; text-transform: uppercase;
+}
+
+/* ── 공통 컴포넌트 ── */
+.btn { padding: 10px 20px; border-radius: 50px; font-size: 15px; font-weight: 800; border: none; cursor: pointer; }
+.btn-purple { background: var(--purple); color: #FFF; box-shadow: 0 4px 16px rgba(124,58,237,.35); }
+.btn-orange { background: var(--orange); color: #FFF; box-shadow: 0 4px 16px rgba(249,115,22,.35); }
+.btn-green  { background: var(--green); color: #FFF; }
+.btn-outline { background: transparent; border: 2px solid var(--border); color: var(--purple); }
+.btn-sm { padding: 7px 16px; font-size: 13px; }
+.btn-xs { padding: 5px 12px; font-size: 12px; }
+
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.b-purple { background: var(--purple-l); color: var(--purple); }
+.b-orange { background: var(--orange-l); color: var(--orange); }
+.b-green  { background: var(--green-l); color: var(--green); }
+.b-yellow { background: var(--yellow-l); color: #854D0E; }
+.b-pink   { background: var(--pink-l); color: var(--pink); }
+.b-red    { background: var(--red-l); color: var(--red); }
+.b-blue   { background: var(--blue-l); color: var(--blue); }
+
+/* ── 별 / 게임화 ── */
+.star { color: var(--yellow); font-size: 18px; }
+.star-sm { font-size: 14px; }
+.star.empty { color: #DDD6FE; }
+.xp-bar-track { height: 12px; background: var(--purple-l); border-radius: 50px; overflow: hidden; }
+.xp-bar-fill { height: 100%; border-radius: 50px; background: linear-gradient(90deg, var(--purple), var(--violet)); transition: width .4s; }
+.bar-track { height: 8px; background: #EDE9FE; border-radius: 50px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 50px; }
+.f-purple { background: linear-gradient(90deg, var(--purple-d), var(--purple)); }
+.f-orange { background: linear-gradient(90deg, #C2410C, var(--orange)); }
+.f-green  { background: linear-gradient(90deg, #15803D, var(--green)); }
+.f-red    { background: linear-gradient(90deg, #B91C1C, var(--red)); }
+.f-yellow { background: linear-gradient(90deg, #A16207, var(--yellow)); }
+.f-blue   { background: linear-gradient(90deg, #1D4ED8, var(--blue)); }
+
+/* ═══════════════════════════════
+   SCREEN 1 — 아동 홈 화면
+═══════════════════════════════ */
+.home-body { flex: 1; padding: 0; display: flex; flex-direction: column; }
+
+.home-hero {
+  background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 60%, #A855F7 100%);
+  padding: 20px 28px 28px;
+  position: relative; overflow: hidden;
+}
+.home-hero::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px;
+  background: rgba(255,255,255,.06); border-radius: 50%;
+}
+.home-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.child-name { color: #FFF; font-size: 22px; font-weight: 900; }
+.child-sub  { color: rgba(255,255,255,.7); font-size: 13px; margin-top: 2px; }
+.avatar-big {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+
+.level-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.level-badge { background: var(--yellow); color: #7A3800; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: 20px; }
+.xp-text { color: rgba(255,255,255,.75); font-size: 12px; font-weight: 600; }
+.home-hero .xp-bar-track { background: rgba(255,255,255,.2); flex: 1; }
+.home-hero .xp-bar-fill { background: linear-gradient(90deg, var(--yellow), #FDE68A); }
+
+.streak-row { display: flex; gap: 10px; margin-top: 14px; }
+.streak-card {
+  background: rgba(255,255,255,.12); border-radius: 14px; padding: 10px 14px;
+  flex: 1; display: flex; align-items: center; gap: 10px;
+}
+.sc-icon { font-size: 24px; }
+.sc-val { font-size: 20px; font-weight: 900; color: #FFF; }
+.sc-lbl { font-size: 11px; color: rgba(255,255,255,.65); }
+
+.home-content { flex: 1; padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; }
+
+.today-mission {
+  background: linear-gradient(135deg, var(--orange-l), #FEF3C7);
+  border: 2px solid rgba(249,115,22,.2);
+  border-radius: 18px; padding: 16px 18px;
+  display: flex; align-items: center; gap: 16px;
+}
+.tm-icon { font-size: 40px; flex-shrink: 0; }
+.tm-title { font-size: 16px; font-weight: 900; color: #7C2D12; margin-bottom: 4px; }
+.tm-desc  { font-size: 13px; color: #9A3412; }
+.tm-stars { margin-top: 6px; display: flex; gap: 3px; }
+
+.menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.menu-card {
+  background: var(--white); border: 2px solid var(--border);
+  border-radius: 18px; padding: 16px 12px;
+  text-align: center; cursor: pointer;
+  transition: transform .15s;
+}
+.menu-card:hover { transform: translateY(-2px); }
+.menu-card.highlight { background: linear-gradient(135deg, var(--purple), var(--violet)); border-color: transparent; }
+.menu-icon { font-size: 28px; margin-bottom: 8px; }
+.menu-name { font-size: 13px; font-weight: 800; color: var(--dark); }
+.menu-card.highlight .menu-name { color: #FFF; }
+.menu-cnt { font-size: 11px; color: var(--purple); font-weight: 600; margin-top: 3px; }
+.menu-card.highlight .menu-cnt { color: rgba(255,255,255,.7); }
+
+.recent-row { display: flex; gap: 10px; }
+.recent-item {
+  flex: 1; background: var(--purple-l); border-radius: 14px; padding: 12px 14px;
+  display: flex; gap: 10px; align-items: center;
+}
+.ri-icon { font-size: 22px; }
+.ri-info .ri-title { font-size: 12px; font-weight: 700; color: var(--dark); }
+.ri-info .ri-sub { font-size: 11px; color: var(--purple); margin-top: 2px; }
+.ri-stars { margin-top: 4px; display: flex; gap: 2px; }
+
+.char-progress { display: flex; flex-direction: column; gap: 8px; }
+.char-row { display: flex; align-items: center; gap: 10px; }
+.char-label { font-size: 18px; font-weight: 900; color: var(--dark); width: 28px; text-align: center; }
+.char-bar-wrap { flex: 1; }
+.char-pct { font-size: 12px; font-weight: 700; color: var(--purple); width: 32px; text-align: right; }
+
+/* ═══════════════════════════════
+   SCREEN 2 — 쓰기 연습 화면
+═══════════════════════════════ */
+.write-layout { flex: 1; display: grid; grid-template-columns: 1fr 240px; }
+
+.write-main { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.write-header { display: flex; align-items: center; justify-content: space-between; }
+.write-title { font-size: 18px; font-weight: 900; color: var(--dark); }
+.write-progress-row { display: flex; align-items: center; gap: 10px; }
+.wp-text { font-size: 13px; font-weight: 700; color: var(--purple); }
+
+/* 참고 글자 */
+.ref-char-box {
+  background: var(--purple-l); border: 2px dashed var(--border);
+  border-radius: 16px; padding: 14px 18px;
+  display: flex; align-items: center; gap: 20px;
+}
+.ref-char { font-size: 72px; font-weight: 900; color: var(--purple); line-height: 1; }
+.ref-guide { flex: 1; }
+.ref-guide-title { font-size: 13px; font-weight: 800; color: var(--dark); margin-bottom: 8px; }
+.stroke-steps { display: flex; gap: 8px; }
+.stroke-step {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--white); border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900; color: var(--purple); position: relative;
+}
+.stroke-step .step-num {
+  position: absolute; top: -6px; right: -6px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--purple); color: #FFF; font-size: 9px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.stroke-step.done { background: var(--green-l); border-color: var(--green); }
+.stroke-step.done .step-num { background: var(--green); }
+.stroke-step.active { background: var(--yellow-l); border-color: var(--yellow); animation: pulse-step .8s infinite; }
+.stroke-step.active .step-num { background: var(--yellow); color: var(--dark); }
+@keyframes pulse-step { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+/* 실제 쓰기 캔버스 */
+.canvas-area {
+  background: var(--white);
+  border: 2px solid var(--border); border-radius: 18px;
+  position: relative; overflow: hidden;
+  flex: 1; min-height: 200px;
+}
+.canvas-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(124,58,237,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.baseline { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: rgba(249,115,22,.2); }
+.xline { position: absolute; left: 0; right: 0; top: 30%; height: 1px; background: rgba(124,58,237,.1); }
+.canvas-child-writing {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+/* 아이가 쓴 글자 SVG 시뮬레이션 */
+.written-char { font-size: 100px; font-weight: 900; color: #1E1B4B; opacity: .85; font-family: 'Arial', sans-serif; }
+
+/* 실시간 피드백 오버레이 */
+.feedback-overlays { position: absolute; inset: 0; pointer-events: none; }
+.fb-arrow {
+  position: absolute; background: rgba(249,115,22,.9);
+  color: #FFF; font-size: 11px; font-weight: 800;
+  padding: 5px 10px; border-radius: 8px;
+  display: flex; align-items: center; gap: 4px;
+}
+.fb-arrow::after {
+  content: '';
+  position: absolute; bottom: -6px; left: 12px;
+  border: 6px solid transparent; border-top-color: rgba(249,115,22,.9);
+}
+.fb-ok {
+  position: absolute; background: rgba(22,163,74,.9);
+  color: #FFF; font-size: 11px; font-weight: 800;
+  padding: 5px 10px; border-radius: 8px;
+}
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(124,58,237,.6), transparent);
+  animation: scan-anim 2s linear infinite;
+}
+@keyframes scan-anim { 0%{top:0} 100%{top:100%} }
+
+/* 피드백 사이드 */
+.feedback-panel {
+  background: var(--purple-l); border-left: 1px solid var(--border);
+  padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+.fp-title { font-size: 14px; font-weight: 900; color: var(--dark); margin-bottom: 2px; }
+
+.feedback-meters { display: flex; flex-direction: column; gap: 10px; }
+.meter-item { }
+.meter-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+.meter-label .ml-val { font-weight: 800; }
+
+.realtime-fb { display: flex; flex-direction: column; gap: 8px; }
+.rtfb-item {
+  background: var(--white); border-radius: 12px; padding: 10px 12px;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.rtfb-icon { font-size: 16px; flex-shrink: 0; }
+.rtfb-text { font-size: 12px; color: var(--dark); line-height: 1.5; font-weight: 600; }
+
+.sound-haptic-row { display: flex; gap: 8px; }
+.sh-btn {
+  flex: 1; background: var(--white); border: 2px solid var(--border);
+  border-radius: 12px; padding: 8px;
+  text-align: center; font-size: 11px; font-weight: 700; color: var(--mid); cursor: pointer;
+}
+.sh-btn.on { background: var(--purple); border-color: transparent; color: #FFF; }
+.sh-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+
+.next-btn-area { margin-top: auto; }
+
+/* 하단 탭바 */
+.tab-bar {
+  background: rgba(255,255,255,.95); backdrop-filter: blur(12px);
+  border-top: 1.5px solid var(--border);
+  display: flex; height: 64px;
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; }
+.tab .icon { font-size: 22px; }
+.tab .label { font-size: 10px; font-weight: 700; color: #A78BFA; }
+.tab.active .label { color: var(--purple); }
+.tab.active .icon { filter: none; }
+
+/* ═══════════════════════════════
+   SCREEN 3 — AI 탐지 결과 리포트
+═══════════════════════════════ */
+.report-header {
+  background: linear-gradient(135deg, #4C1D95, #7C3AED);
+  padding: 20px 24px 30px;
+}
+.rh-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.rh-title { color: #FFF; font-size: 20px; font-weight: 900; }
+.rh-sub   { color: rgba(255,255,255,.65); font-size: 12px; margin-top: 4px; }
+.risk-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(249,115,22,.25); border: 1px solid rgba(249,115,22,.4);
+  border-radius: 20px; padding: 6px 14px;
+  color: #FED7AA; font-size: 12px; font-weight: 800;
+}
+.risk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.score-row { display: flex; gap: 16px; }
+.score-circle {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  border: 3px solid rgba(255,255,255,.3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sc-num { font-size: 24px; font-weight: 900; color: #FFF; }
+.sc-lbl { font-size: 10px; color: rgba(255,255,255,.65); }
+.score-summary { flex: 1; }
+.ss-text { color: rgba(255,255,255,.85); font-size: 13px; line-height: 1.65; }
+.ss-text strong { color: #FFF; }
+
+.report-body { flex: 1; padding: 0 20px 20px; margin-top: -14px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+.indicator-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.indicator-card {
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 14px 16px;
+}
+.ic-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.ic-title { font-size: 13px; font-weight: 800; color: var(--dark); display: flex; align-items: center; gap: 6px; }
+.ic-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+.is-ok   { background: var(--green-l); color: var(--green); }
+.is-warn { background: var(--orange-l); color: var(--orange); }
+.is-err  { background: var(--red-l); color: var(--red); }
+.ic-bar-wrap { margin-bottom: 6px; }
+.ic-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: #6B7280; margin-bottom: 3px; }
+.ic-desc { font-size: 11px; color: #6B7280; line-height: 1.5; }
+
+/* 패턴 시각화 */
+.pattern-vis {
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 14px 16px;
+}
+.pv-title { font-size: 14px; font-weight: 900; color: var(--dark); margin-bottom: 10px; }
+.pattern-samples { display: flex; gap: 10px; align-items: flex-end; }
+.sample-item { flex: 1; text-align: center; }
+.sample-char-box {
+  height: 60px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 900; margin-bottom: 5px; position: relative;
+}
+.scb-ok   { background: var(--green-l); color: var(--dark); }
+.scb-warn { background: var(--orange-l); color: var(--dark); transform: rotate(-4deg); }
+.scb-err  { background: var(--red-l); color: var(--dark); transform: scale(.75) rotate(8deg); }
+.scb-err2 { background: var(--red-l); color: var(--dark); letter-spacing: 8px; }
+.sample-label { font-size: 11px; font-weight: 700; color: var(--sub); }
+.sample-sub   { font-size: 10px; color: #9CA3AF; }
+
+/* 전문가 상담 배너 */
+.consult-banner {
+  background: linear-gradient(135deg, #FFF7ED, #FEF3C7);
+  border: 2px solid rgba(249,115,22,.25); border-radius: 16px;
+  padding: 16px 18px; display: flex; gap: 14px; align-items: center;
+}
+.cb-icon { font-size: 36px; flex-shrink: 0; }
+.cb-text h4 { font-size: 15px; font-weight: 900; color: #7C2D12; margin-bottom: 4px; }
+.cb-text p  { font-size: 12px; color: #9A3412; line-height: 1.5; }
+.cb-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+
+/* 훈련 계획 */
+.train-plan { display: flex; flex-direction: column; gap: 8px; }
+.tp-item {
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.tp-num { width: 28px; height: 28px; border-radius: 50%; background: var(--purple); color: #FFF; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tp-info { flex: 1; }
+.tp-name { font-size: 13px; font-weight: 700; color: var(--dark); }
+.tp-desc { font-size: 11px; color: #6B7280; margin-top: 2px; }
+.tp-dur  { font-size: 12px; font-weight: 700; color: var(--purple); flex-shrink: 0; }
+
+/* ═══════════════════════════════
+   SCREEN 4 — 보호자/교사 대시보드
+═══════════════════════════════ */
+.parent-header {
+  background: linear-gradient(135deg, #1E1B4B, #3730A3);
+  padding: 18px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ph-left h2 { color: #FFF; font-size: 18px; font-weight: 900; }
+.ph-left p  { color: rgba(255,255,255,.6); font-size: 12px; margin-top: 3px; }
+.ph-right { display: flex; gap: 8px; align-items: center; }
+.child-chip { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 20px; padding: 6px 14px; display: flex; align-items: center; gap: 8px; color: #FFF; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+.parent-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+
+.parent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.risk-alert {
+  background: linear-gradient(135deg, #FFF7ED, #FFEDD5);
+  border: 2px solid rgba(249,115,22,.3); border-radius: 16px; padding: 16px 18px;
+}
+.ra-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ra-header h4 { font-size: 14px; font-weight: 900; color: #7C2D12; }
+.ra-list { display: flex; flex-direction: column; gap: 6px; }
+.ra-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: #9A3412; line-height: 1.5; }
+.ra-icon { font-size: 14px; flex-shrink: 0; }
+
+.progress-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 16px; padding: 16px; }
+.pc-title { font-size: 14px; font-weight: 900; color: var(--dark); margin-bottom: 12px; }
+.weekly-chart { display: flex; align-items: flex-end; gap: 8px; height: 80px; }
+.wc-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.wc-bar { width: 100%; border-radius: 6px 6px 0 0; }
+.wc-label { font-size: 10px; color: #9CA3AF; font-weight: 600; }
+.wc-val   { font-size: 10px; color: var(--purple); font-weight: 700; }
+
+.indicator-table { width: 100%; }
+.it-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.it-name { font-size: 12px; font-weight: 600; color: var(--dark); width: 80px; flex-shrink: 0; }
+.it-track { flex: 1; height: 8px; background: #EDE9FE; border-radius: 50px; overflow: hidden; }
+.it-fill { height: 100%; border-radius: 50px; }
+.it-val { font-size: 12px; font-weight: 800; width: 32px; text-align: right; }
+.it-trend { font-size: 14px; }
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: flex; gap: 12px; padding-bottom: 12px; position: relative; }
+.tl-item::before {
+  content: ''; position: absolute; left: 17px; top: 28px; bottom: 0;
+  width: 2px; background: var(--border);
+}
+.tl-item:last-child::before { display: none; }
+.tl-dot { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.tl-dot.good { background: var(--green-l); }
+.tl-dot.warn { background: var(--orange-l); }
+.tl-dot.info { background: var(--purple-l); }
+.tl-content { flex: 1; }
+.tl-title { font-size: 13px; font-weight: 700; color: var(--dark); }
+.tl-desc  { font-size: 11px; color: #6B7280; margin-top: 2px; line-height: 1.5; }
+.tl-time  { font-size: 10px; color: #9CA3AF; margin-top: 4px; }
+
+.teacher-share {
+  background: var(--purple-l); border-radius: 14px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.ts-icon { font-size: 28px; }
+.ts-info h4 { font-size: 14px; font-weight: 800; color: var(--dark); }
+.ts-info p  { font-size: 12px; color: var(--purple); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     SCREEN 1 — 아동 홈 화면
+════════════════════════════════════ -->
+<div style="width:100%;max-width:768px;">
+  <p class="screen-tag">① 아동 홈 화면 — 게임화 대시보드</p>
+  <div class="tablet">
+    <div class="tablet-bar">
+      <div class="t-cam"></div>
+      <div class="t-time">9:30 AM</div>
+      <div class="t-right"><span>🔋</span><span>WiFi</span></div>
+    </div>
+    <div class="home-body">
+      <div class="home-hero">
+        <div class="home-top">
+          <div>
+            <div class="child-name">👋 안녕, 지호야!</div>
+            <div class="child-sub">오늘도 같이 연습해볼까? 😊</div>
+          </div>
+          <div class="avatar-big">🧒</div>
+        </div>
+
+        <div class="level-row">
+          <div class="level-badge">⭐ Lv.8 글씨 탐험가</div>
+          <div class="xp-text">580 / 700 XP</div>
+        </div>
+        <div class="xp-bar-track"><div class="xp-bar-fill" style="width:83%"></div></div>
+
+        <div class="streak-row">
+          <div class="streak-card">
+            <div class="sc-icon">🔥</div>
+            <div>
+              <div class="sc-val">7일</div>
+              <div class="sc-lbl">연속 연습</div>
+            </div>
+          </div>
+          <div class="streak-card">
+            <div class="sc-icon">⭐</div>
+            <div>
+              <div class="sc-val">124개</div>
+              <div class="sc-lbl">모은 별</div>
+            </div>
+          </div>
+          <div class="streak-card">
+            <div class="sc-icon">✍️</div>
+            <div>
+              <div class="sc-val">340자</div>
+              <div class="sc-lbl">이번 주 연습</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-content">
+        <!-- 오늘의 미션 -->
+        <div class="today-mission">
+          <div class="tm-icon">🎯</div>
+          <div style="flex:1;">
+            <div class="tm-title">오늘의 미션</div>
+            <div class="tm-desc">'가', '나', '다' 각각 5번씩 — 간격 집중 훈련</div>
+            <div class="tm-stars">
+              <span class="star star-sm">⭐</span>
+              <span class="star star-sm">⭐</span>
+              <span class="star star-sm empty">⭐</span>
+            </div>
+          </div>
+          <button class="btn btn-orange" style="font-size:14px;padding:10px 18px;white-space:nowrap;">시작! ✨</button>
+        </div>
+
+        <!-- 메뉴 -->
+        <div class="menu-grid">
+          <div class="menu-card highlight">
+            <div class="menu-icon">✍️</div>
+            <div class="menu-name">글자 연습</div>
+            <div class="menu-cnt">오늘 12자 남음</div>
+          </div>
+          <div class="menu-card">
+            <div class="menu-icon">🔤</div>
+            <div class="menu-name">낱말 연습</div>
+            <div class="menu-cnt">5단어 도전</div>
+          </div>
+          <div class="menu-card">
+            <div class="menu-icon">🏆</div>
+            <div class="menu-name">도전 모드</div>
+            <div class="menu-cnt">최고 기록 갱신</div>
+          </div>
+          <div class="menu-card">
+            <div class="menu-icon">🎁</div>
+            <div class="menu-name">보상 상자</div>
+            <div class="menu-cnt">2개 획득 가능</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <!-- 최근 연습 -->
+          <div>
+            <div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:10px;">📅 최근 연습</div>
+            <div class="recent-row" style="flex-direction:column;">
+              <div class="recent-item" style="margin-bottom:8px;">
+                <div class="ri-icon">🅰️</div>
+                <div class="ri-info">
+                  <div class="ri-title">모음 'ㅏ ㅓ ㅗ' 연습</div>
+                  <div class="ri-sub">어제 · 8분</div>
+                  <div class="ri-stars"><span class="star star-sm">⭐</span><span class="star star-sm">⭐</span><span class="star star-sm">⭐</span></div>
+                </div>
+              </div>
+              <div class="recent-item">
+                <div class="ri-icon">✏️</div>
+                <div class="ri-info">
+                  <div class="ri-title">자음 'ㄱ ㄴ ㄷ' 획순</div>
+                  <div class="ri-sub">이틀 전 · 12분</div>
+                  <div class="ri-stars"><span class="star star-sm">⭐</span><span class="star star-sm">⭐</span><span class="star star-sm empty">⭐</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 취약 글자 -->
+          <div>
+            <div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:10px;">🎯 AI 추천 집중 글자</div>
+            <div class="char-progress">
+              <div class="char-row">
+                <div class="char-label">가</div>
+                <div class="char-bar-wrap"><div class="bar-track"><div class="bar-fill f-orange" style="width:42%"></div></div></div>
+                <div class="char-pct" style="color:var(--orange);">42%</div>
+              </div>
+              <div class="char-row">
+                <div class="char-label">나</div>
+                <div class="char-bar-wrap"><div class="bar-track"><div class="bar-fill f-yellow" style="width:55%"></div></div></div>
+                <div class="char-pct" style="color:var(--yellow);">55%</div>
+              </div>
+              <div class="char-row">
+                <div class="char-label">마</div>
+                <div class="char-bar-wrap"><div class="bar-track"><div class="bar-fill f-orange" style="width:38%"></div></div></div>
+                <div class="char-pct" style="color:var(--orange);">38%</div>
+              </div>
+              <div class="char-row">
+                <div class="char-label">사</div>
+                <div class="char-bar-wrap"><div class="bar-track"><div class="bar-fill f-purple" style="width:71%"></div></div></div>
+                <div class="char-pct">71%</div>
+              </div>
+              <div class="char-row">
+                <div class="char-label">하</div>
+                <div class="char-bar-wrap"><div class="bar-track"><div class="bar-fill f-green" style="width:84%"></div></div></div>
+                <div class="char-pct" style="color:var(--green);">84%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active"><span class="icon">🏠</span><span class="label">홈</span></div>
+      <div class="tab"><span class="icon">✍️</span><span class="label">연습</span></div>
+      <div class="tab"><span class="icon">🏆</span><span class="label">기록</span></div>
+      <div class="tab"><span class="icon">🎁</span><span class="label">보상</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN 2 — 쓰기 연습 + 실시간 피드백
+════════════════════════════════════ -->
+<div style="width:100%;max-width:768px;">
+  <p class="screen-tag">② 쓰기 연습 — 실시간 AI 피드백 + 다감각</p>
+  <div class="tablet">
+    <div class="tablet-bar">
+      <div class="t-cam"></div>
+      <div class="t-time">9:34 AM</div>
+      <div class="t-right"><span>🔋</span><span>WiFi</span></div>
+    </div>
+
+    <div class="write-layout">
+      <!-- 메인 쓰기 영역 -->
+      <div class="write-main">
+        <div class="write-header">
+          <div class="write-title">✍️ '가' 연습하기</div>
+          <div class="write-progress-row">
+            <div class="wp-text">3 / 5</div>
+            <div style="display:flex;gap:3px;">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star empty">⭐</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 참고 글자 + 획순 -->
+        <div class="ref-char-box">
+          <div class="ref-char">가</div>
+          <div class="ref-guide">
+            <div class="ref-guide-title">획순 가이드</div>
+            <div class="stroke-steps">
+              <div class="stroke-step done"><span>ㄱ</span><div class="step-num">1</div></div>
+              <div class="stroke-step done"><span>│</span><div class="step-num">2</div></div>
+              <div class="stroke-step active"><span>ㅏ</span><div class="step-num">3</div></div>
+              <div style="font-size:11px;color:var(--sub);align-self:center;margin-left:4px;">← 지금 여기!</div>
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:var(--purple);font-weight:600;">💡 3번 획: 위에서 아래로 쭉 내려오세요</div>
+          </div>
+        </div>
+
+        <!-- 캔버스 -->
+        <div class="canvas-area">
+          <div class="canvas-grid"></div>
+          <div class="baseline"></div>
+          <div class="xline"></div>
+          <div class="canvas-child-writing">
+            <div class="written-char">가</div>
+          </div>
+          <div class="scan-line"></div>
+
+          <!-- 피드백 오버레이 -->
+          <div class="feedback-overlays">
+            <div class="fb-arrow" style="top:18px;left:60px;">
+              ↕ 크기가 너무 커요
+            </div>
+            <div class="fb-ok" style="bottom:18px;right:20px;">
+              ✓ 획순 정확!
+            </div>
+          </div>
+        </div>
+
+        <!-- 진행 바 -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--sub);">이번 세트</div>
+          <div class="xp-bar-track" style="flex:1;height:8px;">
+            <div class="xp-bar-fill" style="width:60%"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--purple);">3/5</div>
+        </div>
+      </div>
+
+      <!-- 피드백 사이드 패널 -->
+      <div class="feedback-panel">
+        <div class="fp-title">🤖 AI 실시간 분석</div>
+
+        <!-- 측정 지표 -->
+        <div class="feedback-meters">
+          <div class="meter-item">
+            <div class="meter-label">
+              <span>📏 글자 크기</span>
+              <span class="ml-val" style="color:var(--orange);">⚠ 과대</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill f-orange" style="width:85%"></div></div>
+          </div>
+          <div class="meter-item">
+            <div class="meter-label">
+              <span>↔ 간격 균일성</span>
+              <span class="ml-val" style="color:var(--yellow);">보통</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill f-yellow" style="width:55%"></div></div>
+          </div>
+          <div class="meter-item">
+            <div class="meter-label">
+              <span>⚡ 쓰기 속도</span>
+              <span class="ml-val" style="color:var(--green);">좋음</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill f-green" style="width:72%"></div></div>
+          </div>
+          <div class="meter-item">
+            <div class="meter-label">
+              <span>🔢 획순</span>
+              <span class="ml-val" style="color:var(--green);">정확!</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill f-purple" style="width:95%"></div></div>
+          </div>
+          <div class="meter-item">
+            <div class="meter-label">
+              <span>⏸ 멈춤 횟수</span>
+              <span class="ml-val" style="color:var(--orange);">2회</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill f-orange" style="width:40%"></div></div>
+          </div>
+        </div>
+
+        <!-- 실시간 코멘트 -->
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--dark);margin-bottom:6px;">💬 코치 메시지</div>
+          <div class="realtime-fb">
+            <div class="rtfb-item">
+              <div class="rtfb-icon">✅</div>
+              <div class="rtfb-text">획순이 아주 정확해요! 잘하고 있어요 👍</div>
+            </div>
+            <div class="rtfb-item">
+              <div class="rtfb-icon">📐</div>
+              <div class="rtfb-text">글자를 조금 더 작게 써보세요 — 선 안에 맞추면 돼요</div>
+            </div>
+            <div class="rtfb-item" style="background:var(--yellow-l);">
+              <div class="rtfb-icon">⏸</div>
+              <div class="rtfb-text">3번 획에서 멈췄어요. 한번에 쭉 내려와 봐요!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 다감각 피드백 -->
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--dark);margin-bottom:6px;">🎛 다감각 피드백</div>
+          <div class="sound-haptic-row">
+            <div class="sh-btn on"><span class="sh-icon">🔊</span>소리 ON</div>
+            <div class="sh-btn on"><span class="sh-icon">📳</span>진동 ON</div>
+          </div>
+          <div style="background:var(--white);border-radius:10px;padding:8px 10px;margin-top:6px;font-size:11px;color:#6B7280;line-height:1.5;">
+            <strong style="color:var(--purple);">● 소리:</strong> 획 완성 시 "딩♪" 소리<br>
+            <strong style="color:var(--orange);">● 진동:</strong> 기울기 오류 감지 시 짧은 진동
+          </div>
+        </div>
+
+        <div class="next-btn-area">
+          <button class="btn btn-purple" style="width:100%;font-size:14px;">다음 글자 → (4/5)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab"><span class="icon">🏠</span><span class="label">홈</span></div>
+      <div class="tab active"><span class="icon">✍️</span><span class="label">연습</span></div>
+      <div class="tab"><span class="icon">🏆</span><span class="label">기록</span></div>
+      <div class="tab"><span class="icon">🎁</span><span class="label">보상</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN 3 — AI 탐지 결과 리포트
+════════════════════════════════════ -->
+<div style="width:100%;max-width:768px;">
+  <p class="screen-tag">③ AI 쓰기장애 탐지 결과 — 보호자 리포트</p>
+  <div class="tablet">
+    <div class="tablet-bar">
+      <div class="t-cam"></div>
+      <div class="t-time">10:00 AM</div>
+      <div class="t-right"><span>🔋</span><span>WiFi</span></div>
+    </div>
+
+    <div class="report-header">
+      <div class="rh-top">
+        <div>
+          <div class="rh-title">📊 AI 필기 패턴 분석 리포트</div>
+          <div class="rh-sub">박지호 · 초등 2학년 · 2026년 7월 1일</div>
+        </div>
+        <div class="risk-pill">
+          <div class="risk-dot"></div>
+          쓰기장애 의심 · 전문가 상담 권장
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-circle">
+          <div class="sc-num" style="color:#FCD34D;">52</div>
+          <div class="sc-lbl">종합점수</div>
+        </div>
+        <div class="score-summary">
+          <div class="ss-text">
+            지호의 필기 패턴에서 <strong>글자 크기 불일관성</strong>과 <strong>획 간 멈춤 빈도</strong>가 또래 평균보다 유의미하게 높게 관찰됩니다. 지능·언어능력과는 무관한 <strong>쓰기장애(Dysgraphia) 의심 신호</strong>가 4개 항목에서 감지되었습니다. 조기 전문가 상담을 권장드립니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-body">
+
+      <!-- 지표 그리드 -->
+      <div class="indicator-grid">
+        <div class="indicator-card">
+          <div class="ic-header">
+            <div class="ic-title">📏 글자 크기 일관성</div>
+            <div class="ic-status is-err">위험</div>
+          </div>
+          <div class="ic-bar-wrap">
+            <div class="ic-bar-label"><span>일관성 점수</span><span style="font-weight:700;color:var(--red)">31%</span></div>
+            <div class="bar-track"><div class="bar-fill f-red" style="width:31%"></div></div>
+          </div>
+          <div class="ic-desc">같은 글자를 반복 작성할 때 크기 편차가 또래 평균의 3.2배 수준. 기준선 준수율도 낮음.</div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="ic-header">
+            <div class="ic-title">↔ 자간/어간 균일성</div>
+            <div class="ic-status is-warn">주의</div>
+          </div>
+          <div class="ic-bar-wrap">
+            <div class="ic-bar-label"><span>균일성 점수</span><span style="font-weight:700;color:var(--orange)">48%</span></div>
+            <div class="bar-track"><div class="bar-fill f-orange" style="width:48%"></div></div>
+          </div>
+          <div class="ic-desc">글자·낱말 간 간격이 불규칙. 특히 받침 있는 글자 뒤 간격이 현저히 넓어지는 패턴 반복.</div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="ic-header">
+            <div class="ic-title">⏸ 획 간 멈춤 빈도</div>
+            <div class="ic-status is-err">위험</div>
+          </div>
+          <div class="ic-bar-wrap">
+            <div class="ic-bar-label"><span>유창성 점수</span><span style="font-weight:700;color:var(--red)">29%</span></div>
+            <div class="bar-track"><div class="bar-fill f-red" style="width:29%"></div></div>
+          </div>
+          <div class="ic-desc">획을 연결하는 도중 평균 2.4회/글자 멈춤 발생. 연필 들어올림 빈도 또래 대비 4.1배 높음.</div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="ic-header">
+            <div class="ic-title">⚡ 쓰기 속도</div>
+            <div class="ic-status is-warn">주의</div>
+          </div>
+          <div class="ic-bar-wrap">
+            <div class="ic-bar-label"><span>또래 대비</span><span style="font-weight:700;color:var(--orange)">55%</span></div>
+            <div class="bar-track"><div class="bar-fill f-orange" style="width:55%"></div></div>
+          </div>
+          <div class="ic-desc">분당 글자 수가 또래 평균의 55% 수준. 단순 느린 쓰기가 아닌 멈춤에 의한 속도 저하 패턴.</div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="ic-header">
+            <div class="ic-title">🔢 획순 정확도</div>
+            <div class="ic-status is-ok">양호</div>
+          </div>
+          <div class="ic-bar-wrap">
+            <div class="ic-bar-label"><span>정확도</span><span style="font-weight:700;color:var(--green)">78%</span></div>
+            <div class="bar-track"><div class="bar-fill f-green" style="width:78%"></div></div>
+          </div>
+          <div class="ic-desc">획순 지식은 양호. 알고 있으나 실행(Motor) 단계에서 어려움을 보이는 점이 핵심 과제.</div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="ic-header">
+            <div class="ic-title">📐 기울기/방향성</div>
+            <div class="ic-status is-warn">주의</div>
+          </div>
+          <div class="ic-bar-wrap">
+            <div class="ic-bar-label"><span>안정성</span><span style="font-weight:700;color:var(--orange)">44%</span></div>
+            <div class="bar-track"><div class="bar-fill f-orange" style="width:44%"></div></div>
+          </div>
+          <div class="ic-desc">수직 획이 5° 이상 기울어지는 빈도 높음. 왼쪽 기울기 우세 (오른손잡이 기준 비전형).</div>
+        </div>
+      </div>
+
+      <!-- 패턴 시각화 -->
+      <div class="pattern-vis">
+        <div class="pv-title">🔍 실제 필기 패턴 샘플 비교</div>
+        <div class="pattern-samples">
+          <div class="sample-item">
+            <div class="sample-char-box scb-ok">가</div>
+            <div class="sample-label">✅ 표준 샘플</div>
+            <div class="sample-sub">또래 평균</div>
+          </div>
+          <div class="sample-item">
+            <div class="sample-char-box scb-warn">가</div>
+            <div class="sample-label">⚠️ 크기 불일관</div>
+            <div class="sample-sub">반복 작성 시</div>
+          </div>
+          <div class="sample-item">
+            <div class="sample-char-box scb-err">가</div>
+            <div class="sample-label">🔴 기울기 오류</div>
+            <div class="sample-sub">방향 불안정</div>
+          </div>
+          <div class="sample-item" style="flex:1.5;">
+            <div class="sample-char-box scb-err2" style="font-size:24px;letter-spacing:6px;">가나다</div>
+            <div class="sample-label">🔴 자간 불균일</div>
+            <div class="sample-sub">낱말 쓰기 시</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 전문가 상담 권장 -->
+      <div class="consult-banner">
+        <div class="cb-icon">🏥</div>
+        <div class="cb-text">
+          <h4>전문가 상담을 권장드립니다</h4>
+          <p>AI 탐지는 스크리닝 보조 도구입니다. 확진은 작업치료사·특수교육 전문가의 표준화 검사(DASH, ETCH 등)를 통해 이루어집니다. 이 리포트를 지참하시면 상담이 더욱 정확해집니다.</p>
+          <div class="cb-btn-row">
+            <button class="btn btn-orange btn-sm">📄 PDF 리포트 저장</button>
+            <button class="btn btn-outline btn-sm">🏥 근처 전문기관 찾기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 맞춤 훈련 계획 -->
+      <div>
+        <div style="font-size:15px;font-weight:900;color:var(--dark);margin-bottom:10px;">🎯 AI 맞춤 훈련 계획 (탐지 → 훈련 연계)</div>
+        <div class="train-plan">
+          <div class="tp-item">
+            <div class="tp-num">1</div>
+            <div class="tp-info">
+              <div class="tp-name">크기 조절 훈련 — 격자 안에 맞추기</div>
+              <div class="tp-desc">단계별 격자 크기 축소, 기준선 인식 강화</div>
+            </div>
+            <div class="tp-dur">매일 10분</div>
+          </div>
+          <div class="tp-item">
+            <div class="tp-num">2</div>
+            <div class="tp-info">
+              <div class="tp-name">획 유창성 — 멈춤 없이 한 번에 긋기</div>
+              <div class="tp-desc">진동 피드백으로 멈춤 구간 실시간 알림</div>
+            </div>
+            <div class="tp-dur">매일 8분</div>
+          </div>
+          <div class="tp-item">
+            <div class="tp-num">3</div>
+            <div class="tp-info">
+              <div class="tp-name">리듬 쓰기 — 음악에 맞춰 일정 속도 유지</div>
+              <div class="tp-desc">비트에 맞춰 쓰며 속도 일관성 및 자간 훈련</div>
+            </div>
+            <div class="tp-dur">주 3회</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN 4 — 보호자/교사 대시보드
+════════════════════════════════════ -->
+<div style="width:100%;max-width:768px;">
+  <p class="screen-tag">④ 보호자 · 교사 대시보드 — 진행 추적</p>
+  <div class="tablet">
+    <div class="tablet-bar">
+      <div class="t-cam"></div>
+      <div class="t-time">8:00 AM</div>
+      <div class="t-right"><span>🔋</span><span>WiFi</span></div>
+    </div>
+
+    <div class="parent-header">
+      <div class="ph-left">
+        <h2>👨‍👩‍👦 보호자 대시보드</h2>
+        <p>AI 필기 코치 진행 현황 · 2026년 7월</p>
+      </div>
+      <div class="ph-right">
+        <div class="child-chip">🧒 박지호 ▾</div>
+        <button class="btn btn-outline btn-sm" style="color:#FFF;border-color:rgba(255,255,255,.3);">📄 리포트</button>
+      </div>
+    </div>
+
+    <div class="parent-body">
+
+      <div class="parent-grid">
+        <!-- 위험 신호 경고 -->
+        <div class="risk-alert" style="grid-column:1/-1;">
+          <div class="ra-header">
+            <span style="font-size:20px;">⚠️</span>
+            <h4>AI 탐지: 4개 항목에서 쓰기장애 의심 패턴 확인됨</h4>
+            <span class="badge b-orange" style="margin-left:auto;">전문가 상담 권장</span>
+          </div>
+          <div class="ra-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;">
+            <div class="ra-item"><span class="ra-icon">🔴</span>글자 크기 편차 — 또래 대비 3.2배</div>
+            <div class="ra-item"><span class="ra-icon">🔴</span>획 간 멈춤 빈도 — 4.1배 높음</div>
+            <div class="ra-item"><span class="ra-icon">🟡</span>자간 불균일 — 주의 필요</div>
+            <div class="ra-item"><span class="ra-icon">🟡</span>쓰기 속도 — 또래의 55%</div>
+          </div>
+        </div>
+
+        <!-- 주간 연습 차트 -->
+        <div class="progress-card">
+          <div class="pc-title">📈 이번 주 일일 연습 시간 (분)</div>
+          <div class="weekly-chart">
+            <div class="wc-bar-wrap">
+              <div class="wc-val">12분</div>
+              <div class="wc-bar" style="height:60%;background:var(--purple);opacity:.7;"></div>
+              <div class="wc-label">월</div>
+            </div>
+            <div class="wc-bar-wrap">
+              <div class="wc-val">8분</div>
+              <div class="wc-bar" style="height:40%;background:var(--purple);opacity:.7;"></div>
+              <div class="wc-label">화</div>
+            </div>
+            <div class="wc-bar-wrap">
+              <div class="wc-val">15분</div>
+              <div class="wc-bar" style="height:75%;background:var(--purple);"></div>
+              <div class="wc-label">수</div>
+            </div>
+            <div class="wc-bar-wrap">
+              <div class="wc-val">0분</div>
+              <div class="wc-bar" style="height:5%;background:#DDD;"></div>
+              <div class="wc-label">목</div>
+            </div>
+            <div class="wc-bar-wrap">
+              <div class="wc-val">18분</div>
+              <div class="wc-bar" style="height:90%;background:var(--purple);"></div>
+              <div class="wc-label">금</div>
+            </div>
+            <div class="wc-bar-wrap">
+              <div class="wc-val">10분</div>
+              <div class="wc-bar" style="height:50%;background:var(--violet);opacity:.8;"></div>
+              <div class="wc-label">토</div>
+            </div>
+            <div class="wc-bar-wrap">
+              <div class="wc-val">0분</div>
+              <div class="wc-bar" style="height:5%;background:#DDD;"></div>
+              <div class="wc-label">일</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:10px;">
+            <div style="text-align:center;flex:1;background:var(--purple-l);border-radius:10px;padding:8px;">
+              <div style="font-size:18px;font-weight:900;color:var(--purple);">7일</div>
+              <div style="font-size:11px;color:var(--sub);">연속 참여</div>
+            </div>
+            <div style="text-align:center;flex:1;background:var(--orange-l);border-radius:10px;padding:8px;">
+              <div style="font-size:18px;font-weight:900;color:var(--orange);">63분</div>
+              <div style="font-size:11px;color:var(--sub);">주간 총 연습</div>
+            </div>
+            <div style="text-align:center;flex:1;background:var(--green-l);border-radius:10px;padding:8px;">
+              <div style="font-size:18px;font-weight:900;color:var(--green);">340자</div>
+              <div style="font-size:11px;color:var(--sub);">연습 글자 수</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 지표별 추이 -->
+        <div class="progress-card">
+          <div class="pc-title">📊 지표별 4주 추이</div>
+          <div class="indicator-table">
+            <div class="it-row">
+              <div class="it-name">크기 일관성</div>
+              <div class="it-track"><div class="it-fill f-orange" style="width:31%"></div></div>
+              <div class="it-val" style="color:var(--orange);">31%</div>
+              <div class="it-trend" title="지난주 대비">📈</div>
+            </div>
+            <div class="it-row">
+              <div class="it-name">자간 균일성</div>
+              <div class="it-track"><div class="it-fill f-orange" style="width:48%"></div></div>
+              <div class="it-val" style="color:var(--orange);">48%</div>
+              <div class="it-trend">📈</div>
+            </div>
+            <div class="it-row">
+              <div class="it-name">획 유창성</div>
+              <div class="it-track"><div class="it-fill f-red" style="width:29%"></div></div>
+              <div class="it-val" style="color:var(--red);">29%</div>
+              <div class="it-trend">➡️</div>
+            </div>
+            <div class="it-row">
+              <div class="it-name">쓰기 속도</div>
+              <div class="it-track"><div class="it-fill f-yellow" style="width:55%"></div></div>
+              <div class="it-val" style="color:var(--yellow);">55%</div>
+              <div class="it-trend">📈</div>
+            </div>
+            <div class="it-row">
+              <div class="it-name">획순 정확도</div>
+              <div class="it-track"><div class="it-fill f-green" style="width:78%"></div></div>
+              <div class="it-val" style="color:var(--green);">78%</div>
+              <div class="it-trend">📈</div>
+            </div>
+          </div>
+          <div style="background:var(--green-l);border-radius:10px;padding:9px 12px;margin-top:10px;font-size:12px;color:var(--green);font-weight:700;">
+            📈 전반적으로 4주간 꾸준히 개선 중! 훈련 효과가 나타나고 있어요.
+          </div>
+        </div>
+      </div>
+
+      <!-- 타임라인 -->
+      <div class="progress-card">
+        <div class="pc-title">🕐 최근 AI 코치 활동 로그</div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot good">⭐</div>
+            <div class="tl-content">
+              <div class="tl-title">'가나다' 낱말 훈련 완료 — 별 3개 획득</div>
+              <div class="tl-desc">크기 일관성 31% → 38%로 향상. AI가 다음 훈련으로 '자간 집중 모드' 자동 설정.</div>
+              <div class="tl-time">오늘 오전 9:34</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot warn">⚠️</div>
+            <div class="tl-content">
+              <div class="tl-title">획 간 멈춤 패턴 지속 감지</div>
+              <div class="tl-desc">'ㅎ' 자음 쓰기 시 멈춤 평균 3.1회 발생. AI가 '획 유창성 집중 훈련' 콘텐츠를 자동 추가.</div>
+              <div class="tl-time">오늘 오전 9:40</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot info">🤖</div>
+            <div class="tl-content">
+              <div class="tl-title">AI 주간 훈련 계획 갱신</div>
+              <div class="tl-desc">이번 주 취약 패턴 기반으로 훈련 콘텐츠 자동 재구성. 리듬 쓰기 모드 비중 30% 증가.</div>
+              <div class="tl-time">어제 오후 8:00</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot good">🏆</div>
+            <div class="tl-content">
+              <div class="tl-title">7일 연속 연습 달성 — 뱃지 획득!</div>
+              <div class="tl-desc">지호가 보상 상자를 열었습니다 🎁. 참여 동기 유지 중.</div>
+              <div class="tl-time">어제 오전 9:15</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 교사 공유 -->
+      <div class="teacher-share">
+        <div class="ts-icon">👩‍🏫</div>
+        <div class="ts-info">
+          <h4>담임 선생님께 리포트 공유</h4>
+          <p>4주간 데이터 + AI 분석 리포트를 교사에게 전송하여 학교에서도 연계 지도 가능</p>
+        </div>
+        <button class="btn btn-purple btn-sm" style="flex-shrink:0;">리포트 공유 →</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
