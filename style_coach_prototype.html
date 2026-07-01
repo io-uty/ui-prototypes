@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>StyleEye — AI 스타일 코치</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy:   #1B2A4A;
+    --navy-d: #0F1E37;
+    --blue:   #2E6FD9;
+    --blue-l: #E8F0FD;
+    --teal:   #0A9396;
+    --gold:   #D4A017;
+    --gold-l: #FDF3D0;
+    --green:  #2A9D5C;
+    --orange: #E07B39;
+    --red:    #D62839;
+    --card:   #F4F6FB;
+    --txt:    #1B2A4A;
+    --sub:    #7B8AB0;
+    --white:  #FFFFFF;
+    --radius: 20px;
+    --shadow: 0 8px 32px rgba(27,42,74,.13);
+  }
+
+  body {
+    font-family: -apple-system, 'Noto Sans KR', sans-serif;
+    background: #E8EDF7;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 30px 12px 60px;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  /* 폰 껍데기 */
+  .phone {
+    width: 375px;
+    min-height: 812px;
+    background: var(--white);
+    border-radius: 48px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.22), 0 0 0 8px #0F1E37;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .notch {
+    width: 120px; height: 28px;
+    background: #0F1E37;
+    border-radius: 0 0 20px 20px;
+    margin: 0 auto;
+    position: relative; z-index: 10;
+  }
+  .screen-label {
+    text-align: center;
+    font-size: 11px; font-weight: 700;
+    color: #2E6FD9;
+    letter-spacing: .08em;
+    margin-bottom: 6px; margin-top: -4px;
+    text-transform: uppercase;
+  }
+
+  .screen { flex: 1; overflow-y: auto; padding-bottom: 90px; }
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 24px 4px;
+    font-size: 12px; font-weight: 600; color: var(--navy);
+  }
+  .status-bar .time { font-size: 15px; font-weight: 700; }
+  .tab-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid #E5E9F2;
+    display: flex;
+    height: 72px;
+    border-radius: 0 0 40px 40px;
+  }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; }
+  .tab .icon { font-size: 22px; }
+  .tab .label { font-size: 10px; font-weight: 600; color: var(--sub); }
+  .tab.active .label { color: var(--blue); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue), #1A4FA0);
+    color: #FFF; border: none; border-radius: 50px;
+    padding: 16px 32px; font-size: 17px; font-weight: 700;
+    width: 100%; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(46,111,217,.35);
+  }
+  .btn-secondary {
+    background: var(--blue-l); color: var(--blue);
+    border: none; border-radius: 50px;
+    padding: 14px 24px; font-size: 14px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), #B8860B);
+    color: #FFF; border: none; border-radius: 50px;
+    padding: 14px 24px; font-size: 14px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+  }
+
+  /* ══ SCREEN 1: 홈 ══ */
+  .home-hero {
+    background: linear-gradient(160deg, #0A1628 0%, #1B3A7A 55%, #2E6FD9 100%);
+    padding: 20px 20px 44px;
+    position: relative; overflow: hidden;
+  }
+  .home-hero::before {
+    content: '';
+    position: absolute; top: -50px; right: -50px;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,.05); border-radius: 50%;
+  }
+  .weather-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 50px; padding: 6px 12px;
+    color: rgba(255,255,255,.85); font-size: 12px; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .greeting { color: rgba(255,255,255,.65); font-size: 14px; margin-bottom: 4px; }
+  .greeting-name { color: #FFF; font-size: 22px; font-weight: 800; margin-bottom: 18px; }
+  .hero-card {
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .hero-icon { font-size: 48px; }
+  .hero-text h2 { color: #FFF; font-size: 16px; font-weight: 800; margin-bottom: 6px; line-height: 1.35; }
+  .hero-text p { color: rgba(255,255,255,.7); font-size: 12px; line-height: 1.5; }
+
+  .section { padding: 18px 18px 0; }
+  .section-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; }
+
+  .today-tpo {
+    background: linear-gradient(135deg, var(--gold-l), #FFF8E0);
+    border: 1.5px solid var(--gold);
+    border-radius: 18px; padding: 16px;
+    display: flex; gap: 14px; align-items: center;
+    margin-bottom: 12px;
+  }
+  .tpo-badge {
+    background: var(--gold); color: #FFF;
+    font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px;
+    display: inline-block; margin-bottom: 6px;
+  }
+  .tpo-title { font-size: 14px; font-weight: 800; color: var(--navy); }
+  .tpo-desc { font-size: 12px; color: #7A6000; margin-top: 3px; line-height: 1.4; }
+
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .quick-card {
+    background: var(--white);
+    border-radius: 18px; padding: 16px 14px;
+    box-shadow: 0 3px 14px rgba(27,42,74,.08);
+    cursor: pointer;
+  }
+  .quick-card.hl { background: linear-gradient(135deg, var(--blue), #1A4FA0); }
+  .quick-icon { font-size: 26px; margin-bottom: 8px; }
+  .quick-name { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .quick-desc { font-size: 11px; color: var(--sub); margin-top: 3px; }
+  .quick-card.hl .quick-name, .quick-card.hl .quick-desc { color: #FFF; }
+
+  .recent-card {
+    background: var(--card); border-radius: 16px;
+    padding: 14px; display: flex; gap: 12px; align-items: center;
+    margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .recent-thumb {
+    width: 52px; height: 66px; border-radius: 12px;
+    background: linear-gradient(135deg, #C8D8F8, #E8EDF7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; flex-shrink: 0;
+  }
+  .recent-info { flex: 1; }
+  .recent-title { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .recent-sub { font-size: 11px; color: var(--sub); margin-top: 3px; }
+  .score-badge {
+    font-size: 16px; font-weight: 800; color: var(--green);
+    background: #E2F5EC; padding: 6px 10px; border-radius: 10px;
+  }
+
+  /* ══ SCREEN 2: 카메라 ══ */
+  .cam-bg { background: #06101F; min-height: 100%; }
+  .cam-top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 20px;
+  }
+  .cam-top-btn {
+    background: rgba(255,255,255,.1); border: none;
+    border-radius: 50px; padding: 7px 14px;
+    color: #FFF; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .cam-viewfinder {
+    width: 100%; height: 440px;
+    background: #0D1B2A; position: relative; overflow: hidden;
+  }
+  /* 전신 실루엣 */
+  .body-guide {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    width: 110px; height: 390px;
+    border: 2px dashed rgba(46,111,217,.5);
+    border-radius: 55px 55px 20px 20px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .body-guide-head {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 2px dashed rgba(46,111,217,.6);
+    margin-top: -27px; background: rgba(46,111,217,.05);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+  }
+  .body-guide-hint {
+    color: rgba(255,255,255,.45); font-size: 11px;
+    text-align: center; margin-top: 60px; line-height: 1.5; padding: 0 10px;
+  }
+
+  /* 스캔 세그멘테이션 영역 */
+  .seg-zone {
+    position: absolute;
+    border-radius: 6px;
+    animation: seg-pulse 1.8s infinite;
+  }
+  @keyframes seg-pulse { 0%,100%{opacity:.6} 50%{opacity:.25} }
+  .seg-top    { top: 44px;  left: 50%; transform: translateX(-50%); width: 100px; height: 100px; border: 1.5px solid #5B9BF8; background: rgba(46,111,217,.08); border-radius: 50%; }
+  .seg-torso  { top: 150px; left: 50%; transform: translateX(-50%); width: 110px; height: 130px; border: 1.5px solid #2E6FD9; background: rgba(46,111,217,.06); animation-delay:.3s; }
+  .seg-legs   { top: 282px; left: 50%; transform: translateX(-50%); width: 100px; height: 110px; border: 1.5px solid #1A4FA0; background: rgba(46,111,217,.05); animation-delay:.6s; }
+
+  .grid-ov {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(46,111,217,.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(46,111,217,.04) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .corner { position: absolute; width: 20px; height: 20px; border-color: #2E6FD9; border-style: solid; opacity: .7; }
+  .c-tl { top: 12px; left: 12px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .c-tr { top: 12px; right: 12px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .c-bl { bottom: 12px; left: 12px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .c-br { bottom: 12px; right: 12px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .scan-progress {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,.55); border-radius: 50px;
+    padding: 6px 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .scan-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: seg-pulse 1s infinite; }
+  .scan-progress span { color: rgba(255,255,255,.8); font-size: 12px; font-weight: 600; }
+
+  .cam-controls { background: #06101F; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .mode-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .mode-row::-webkit-scrollbar { display: none; }
+  .mode-chip { flex-shrink: 0; padding: 8px 14px; border-radius: 50px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; }
+  .mode-chip.on { background: var(--blue); color: #FFF; }
+  .mode-chip.off { background: rgba(255,255,255,.1); color: rgba(255,255,255,.55); }
+
+  .shutter-row { display: flex; align-items: center; justify-content: center; gap: 28px; }
+  .shutter-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), #1A4FA0);
+    border: 4px solid rgba(255,255,255,.25); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    box-shadow: 0 0 22px rgba(46,111,217,.45);
+  }
+  .shutter-side {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,.1); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: #FFF;
+  }
+  .acc-bar {
+    background: rgba(255,255,255,.07); border-radius: 14px;
+    padding: 10px 14px; display: flex; gap: 10px; align-items: center;
+  }
+  .acc-badge-blue { background: var(--blue); color: #FFF; font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 20px; flex-shrink: 0; }
+
+  /* ══ SCREEN 3: 분석 결과 ══ */
+  .result-header {
+    background: linear-gradient(140deg, #0A1628 0%, #1B3A7A 100%);
+    padding: 18px 18px 40px; position: relative;
+  }
+  .back-row { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.6); font-size: 14px; margin-bottom: 14px; }
+  .result-face-row { display: flex; gap: 14px; align-items: flex-start; }
+  .result-thumb {
+    width: 86px; height: 110px; border-radius: 18px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1B3A7A, #2E6FD9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px;
+    border: 2px solid rgba(46,111,217,.4); position: relative; overflow: hidden;
+  }
+  .scan-sweep {
+    position: absolute; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, #5B9BF8, transparent);
+    animation: sweep 2s linear infinite;
+  }
+  @keyframes sweep { 0%{top:0} 100%{top:calc(100% - 3px)} }
+
+  .result-meta h3 { color: #FFF; font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .result-meta .ts { color: rgba(255,255,255,.5); font-size: 11px; margin-bottom: 10px; }
+  .score-big { font-size: 48px; font-weight: 900; color: #FFF; line-height: 1; }
+  .score-unit { color: rgba(255,255,255,.55); font-size: 14px; }
+  .score-lbl { color: #5B9BF8; font-size: 13px; font-weight: 700; margin-top: 4px; }
+
+  .result-body { padding: 0 15px; margin-top: -22px; }
+
+  .summary-card {
+    background: #FFF; border-radius: 20px; padding: 16px 16px 14px;
+    box-shadow: var(--shadow); margin-bottom: 12px;
+  }
+  .tag-blue { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-l); color: var(--blue); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 50px; margin-bottom: 10px; }
+  .tag-gold { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-l); color: #7A6000; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 50px; margin-bottom: 10px; }
+  .summary-text { font-size: 13.5px; color: var(--txt); line-height: 1.65; }
+
+  .detail-card {
+    background: #FFF; border-radius: 20px; padding: 16px;
+    box-shadow: var(--shadow); margin-bottom: 11px;
+  }
+  .detail-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .detail-title { font-size: 14px; font-weight: 800; color: var(--navy); display: flex; align-items: center; gap: 8px; }
+  .chip-ok   { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 20px; background: #E2F5EC; color: var(--green); }
+  .chip-warn { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 20px; background: #FEF3E2; color: var(--orange); }
+  .chip-err  { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 20px; background: #FDEDEC; color: var(--red); }
+  .chip-tpo  { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 20px; background: var(--gold-l); color: #7A6000; }
+
+  .bar-wrap { margin-bottom: 9px; }
+  .bar-lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+  .bar-track { height: 7px; background: #EEF1F8; border-radius: 50px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 50px; }
+  .f-green  { background: linear-gradient(90deg, #27AE60, #2ECC71); }
+  .f-orange { background: linear-gradient(90deg, #E07B39, #F39C12); }
+  .f-red    { background: linear-gradient(90deg, #C0392B, #E74C3C); }
+  .f-blue   { background: linear-gradient(90deg, #1A4FA0, #2E6FD9); }
+
+  .fb-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .fb-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--card); border-radius: 12px; padding: 10px 12px;
+    font-size: 13px; color: var(--txt); line-height: 1.5;
+  }
+  .fb-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  /* 색 조합 시각화 */
+  .color-row { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  .color-swatch {
+    width: 38px; height: 38px; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 3px; font-size: 9px; font-weight: 700; color: #FFF;
+    text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  }
+  .color-arrow { font-size: 18px; color: var(--sub); }
+  .harmony-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: #E2F5EC; border-radius: 50px; padding: 6px 12px;
+    font-size: 12px; font-weight: 700; color: var(--green); margin-top: 4px;
+  }
+
+  /* 날씨 카드 */
+  .weather-card {
+    background: linear-gradient(135deg, #E8F0FD, #D4E4FC);
+    border-radius: 18px; padding: 14px; margin-bottom: 11px;
+    border: 1.5px solid rgba(46,111,217,.2);
+  }
+  .weather-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .weather-title { font-size: 14px; font-weight: 800; color: var(--navy); display: flex; gap: 7px; align-items: center; }
+  .weather-now { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.6); border-radius: 12px; padding: 8px 12px; }
+  .weather-now span { font-size: 28px; }
+  .weather-now-info .temp { font-size: 18px; font-weight: 800; color: var(--navy); }
+  .weather-now-info .desc { font-size: 11px; color: var(--sub); }
+
+  .shoe-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .shoe-item {
+    background: rgba(255,255,255,.7); border-radius: 13px; padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .shoe-icon { font-size: 24px; }
+  .shoe-info .shoe-name { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .shoe-info .shoe-reason { font-size: 11px; color: var(--sub); margin-top: 2px; }
+  .shoe-rank { background: var(--blue); color: #FFF; font-size: 11px; font-weight: 800; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .action-row { display: flex; gap: 10px; margin-top: 14px; margin-bottom: 14px; }
+
+  /* ══ SCREEN 4: 접근성 설정 ══ */
+  .acc-header {
+    background: linear-gradient(135deg, var(--navy-d), #1B3A7A);
+    padding: 22px 20px 30px; color: #FFF;
+  }
+  .acc-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .acc-header p { color: rgba(255,255,255,.6); font-size: 13px; line-height: 1.5; }
+  .profile-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .profile-chip {
+    padding: 7px 14px; border-radius: 50px; font-size: 12px; font-weight: 700;
+    border: none; cursor: pointer;
+  }
+  .profile-chip.on { background: var(--blue); color: #FFF; }
+  .profile-chip.off { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
+
+  .acc-sec { padding: 14px 15px 0; }
+  .acc-sec-title { font-size: 11px; font-weight: 800; color: var(--sub); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .acc-item {
+    background: #FFF; border-radius: 16px; padding: 14px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 9px; box-shadow: 0 2px 8px rgba(27,42,74,.07);
+  }
+  .acc-icon { font-size: 24px; }
+  .acc-info { flex: 1; }
+  .acc-name { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 2px; }
+  .acc-desc { font-size: 12px; color: var(--sub); line-height: 1.4; }
+  .toggle {
+    width: 50px; height: 28px; border-radius: 50px;
+    border: none; cursor: pointer; position: relative;
+    transition: background .2s; flex-shrink: 0;
+  }
+  .toggle.on { background: linear-gradient(135deg, var(--blue), #1A4FA0); }
+  .toggle.off { background: #DDD; }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 22px; height: 22px; border-radius: 50%; background: #FFF;
+    top: 3px; transition: left .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  }
+  .toggle.on::after { left: 25px; }
+  .toggle.off::after { left: 3px; }
+  .select-pill {
+    background: var(--blue-l); color: var(--blue);
+    font-size: 12px; font-weight: 700; padding: 6px 12px;
+    border-radius: 50px; border: none; cursor: pointer; flex-shrink: 0;
+  }
+  .range-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .range-slider {
+    flex: 1; height: 6px; border-radius: 50px;
+    background: linear-gradient(90deg, var(--blue) 65%, #DDD 65%);
+    outline: none; -webkit-appearance: none; appearance: none;
+  }
+  .range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px;
+    border-radius: 50%; background: var(--blue); cursor: pointer;
+    box-shadow: 0 2px 8px rgba(46,111,217,.4);
+  }
+</style>
+</head>
+<body>
+
+<!-- ━━━━━━━━━━━━━━ SCREEN 1: 홈 ━━━━━━━━━━━━━━ -->
+<div>
+  <p class="screen-label">① 홈 화면</p>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="status-bar">
+        <span class="time">8:30</span>
+        <span>🔋 ▲</span>
+      </div>
+
+      <div class="home-hero">
+        <div class="weather-pill">☀️ 서울 28°C · 맑음 · 습도 62%</div>
+        <p class="greeting">좋은 아침이에요 👔</p>
+        <p class="greeting-name">박민준 님</p>
+        <div class="hero-card">
+          <div class="hero-icon">🧥</div>
+          <div class="hero-text">
+            <h2>오늘 출근룩을<br>AI가 체크해드릴게요</h2>
+            <p>색 조합 · TPO · 구김 · 단추<br>전신을 한 번에 분석합니다</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 오늘의 TPO -->
+      <div class="section">
+        <p class="section-title">오늘의 TPO 가이드</p>
+        <div class="today-tpo">
+          <div>
+            <span class="tpo-badge">📋 출근 · 비즈니스</span>
+            <p class="tpo-title">포멀 캐주얼 추천</p>
+            <p class="tpo-desc">슬랙스 + 깔끔한 셔츠 또는<br>재킷 코디를 권장합니다</p>
+          </div>
+          <span style="font-size:44px;">💼</span>
+        </div>
+      </div>
+
+      <!-- 빠른 분석 -->
+      <div class="section">
+        <p class="section-title">빠른 분석</p>
+        <div class="quick-grid">
+          <div class="quick-card hl">
+            <div class="quick-icon">📷</div>
+            <div class="quick-name">전신 분석</div>
+            <div class="quick-desc">지금 바로 코디 체크</div>
+          </div>
+          <div class="quick-card">
+            <div class="quick-icon">🎨</div>
+            <div class="quick-name">색 조합 검사</div>
+            <div class="quick-desc">컬러 하모니 확인</div>
+          </div>
+          <div class="quick-card">
+            <div class="quick-icon">🔍</div>
+            <div class="quick-name">옷 상태 검사</div>
+            <div class="quick-desc">구김·단추·보풀</div>
+          </div>
+          <div class="quick-card">
+            <div class="quick-icon">⚖️</div>
+            <div class="quick-name">TPO 판단</div>
+            <div class="quick-desc">상황별 적합도</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 최근 분석 -->
+      <div class="section" style="margin-top:16px;">
+        <p class="section-title">최근 분석</p>
+        <div class="recent-card">
+          <div class="recent-thumb">👔</div>
+          <div class="recent-info">
+            <p class="recent-title">출근룩 전신 분석</p>
+            <p class="recent-sub">어제 오전 8:20 · 사무실 캐주얼</p>
+          </div>
+          <div class="score-badge">91</div>
+        </div>
+        <div class="recent-card">
+          <div class="recent-thumb">👗</div>
+          <div class="recent-info">
+            <p class="recent-title">면접 복장 TPO 체크</p>
+            <p class="recent-sub">6월 28일 · 포멀 비즈니스</p>
+          </div>
+          <div class="score-badge" style="color:var(--orange);background:#FEF3E2;">76</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active"><span class="icon">🏠</span><span class="label">홈</span></div>
+      <div class="tab"><span class="icon">📷</span><span class="label">분석</span></div>
+      <div class="tab"><span class="icon">👗</span><span class="label">옷장</span></div>
+      <div class="tab"><span class="icon">⚙️</span><span class="label">설정</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━ SCREEN 2: 카메라 ━━━━━━━━━━━━━━ -->
+<div>
+  <p class="screen-label">② 카메라 · 전신 스캔</p>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen cam-bg">
+      <div class="status-bar" style="color:#FFF;">
+        <span class="time">8:31</span>
+        <span>🔋</span>
+      </div>
+
+      <!-- 상단 바 -->
+      <div class="cam-top-bar">
+        <button class="cam-top-btn">← 취소</button>
+        <button class="cam-top-btn">☀️ 28°C 맑음</button>
+        <button class="cam-top-btn">🔦 플래시</button>
+      </div>
+
+      <!-- 뷰파인더 -->
+      <div class="cam-viewfinder">
+        <div class="grid-ov"></div>
+        <div class="corner c-tl"></div>
+        <div class="corner c-tr"></div>
+        <div class="corner c-bl"></div>
+        <div class="corner c-br"></div>
+
+        <!-- 전신 가이드 -->
+        <div class="body-guide">
+          <div class="body-guide-head">🧑</div>
+          <p class="body-guide-hint">전신이 화면에<br>들어오도록 서주세요</p>
+        </div>
+
+        <!-- 세그멘테이션 존 -->
+        <div class="seg-zone seg-top"></div>
+        <div class="seg-zone seg-torso"></div>
+        <div class="seg-zone seg-legs"></div>
+
+        <!-- 스캔 영역 레이블 -->
+        <div style="position:absolute;top:60px;left:56%;color:rgba(255,255,255,.5);font-size:10px;font-weight:700;">상의</div>
+        <div style="position:absolute;top:188px;left:56%;color:rgba(255,255,255,.5);font-size:10px;font-weight:700;">하의</div>
+        <div style="position:absolute;top:300px;left:56%;color:rgba(255,255,255,.5);font-size:10px;font-weight:700;">신발</div>
+
+        <div class="scan-progress">
+          <div class="scan-dot"></div>
+          <span>전신 감지 중… 뒤로 조금 물러나세요</span>
+        </div>
+      </div>
+
+      <!-- 컨트롤 -->
+      <div class="cam-controls">
+        <div class="mode-row">
+          <button class="mode-chip on">전신 분석</button>
+          <button class="mode-chip off">상의만</button>
+          <button class="mode-chip off">색 조합</button>
+          <button class="mode-chip off">구김 탐지</button>
+          <button class="mode-chip off">TPO 판단</button>
+        </div>
+
+        <div class="shutter-row">
+          <button class="shutter-side">⏱️</button>
+          <button class="shutter-btn">📸</button>
+          <button class="shutter-side">🔄</button>
+        </div>
+
+        <div class="acc-bar">
+          <span style="font-size:18px;">🔊</span>
+          <span style="color:rgba(255,255,255,.65);font-size:12px;flex:1;">음성 안내: 전신이 감지됩니다. 셔터 버튼을 누르거나 "찍어줘"라고 말하세요</span>
+          <span class="acc-badge-blue">ON</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━ SCREEN 3: 분석 결과 ━━━━━━━━━━━━━━ -->
+<div>
+  <p class="screen-label">③ 분석 결과</p>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="status-bar">
+        <span class="time">8:33</span>
+        <span>🔋</span>
+      </div>
+
+      <div class="result-header">
+        <div class="back-row">← 분석 결과</div>
+        <div class="result-face-row">
+          <div class="result-thumb">
+            🧑‍💼
+            <div class="scan-sweep"></div>
+          </div>
+          <div class="result-meta">
+            <h3>출근룩 전신 분석</h3>
+            <p class="ts">2026.07.01 · 오전 8:33 · 서울</p>
+            <div style="display:flex;align-items:baseline;gap:5px;">
+              <span class="score-big">91</span>
+              <span class="score-unit">/ 100</span>
+            </div>
+            <p class="score-lbl">출근 준비 완료 ✨</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-body">
+
+        <!-- AI 종합 -->
+        <div class="summary-card" style="margin-top:0;">
+          <div class="tag-blue">🤖 AI 종합 피드백</div>
+          <p class="summary-text">전체적으로 <strong>깔끔하고 완성도 높은 비즈니스 캐주얼</strong>이에요. 셔츠 색과 슬랙스의 컬러 하모니가 자연스럽습니다. 다만 <strong>왼쪽 소매에 경미한 구김</strong>이 감지됐어요. 오늘 날씨(28°C 맑음)에는 현재 복장이 <strong>TPO상 적합</strong>하며, 신발은 로퍼나 더비슈즈를 추천드립니다.</p>
+        </div>
+
+        <!-- 색 조합 -->
+        <div class="detail-card">
+          <div class="detail-hd">
+            <div class="detail-title">🎨 색 조합 분석</div>
+            <div class="chip-ok">조화로움</div>
+          </div>
+          <div class="color-row">
+            <div class="color-swatch" style="background:#2C3E6B;">네이비</div>
+            <div class="color-arrow">+</div>
+            <div class="color-swatch" style="background:#F0EAD6;color:#999;text-shadow:none;">아이보리</div>
+            <div class="color-arrow">+</div>
+            <div class="color-swatch" style="background:#5C4033;">브라운</div>
+            <div class="color-arrow">=</div>
+            <div class="harmony-badge">✅ 클래식 트리오</div>
+          </div>
+          <ul class="fb-list" style="margin-top:8px;">
+            <li class="fb-item"><span class="fb-icon">✅</span>네이비-아이보리 대비가 깔끔하고 전문적이에요</li>
+            <li class="fb-item"><span class="fb-icon">✅</span>브라운 벨트·신발로 색 연결이 자연스러워요</li>
+            <li class="fb-item"><span class="fb-icon">💡</span>밝은 파란 넥타이 추가 시 포인트 효과가 좋아요</li>
+          </ul>
+        </div>
+
+        <!-- TPO 판단 -->
+        <div class="detail-card">
+          <div class="detail-hd">
+            <div class="detail-title">📋 TPO 적합도</div>
+            <div class="chip-tpo">출근 ✓</div>
+          </div>
+          <div class="bar-wrap">
+            <div class="bar-lbl"><span>사무실 · 비즈니스</span><span style="font-weight:700;color:var(--green)">95%</span></div>
+            <div class="bar-track"><div class="bar-fill f-green" style="width:95%"></div></div>
+          </div>
+          <div class="bar-wrap">
+            <div class="bar-lbl"><span>중요 미팅 · 프레젠테이션</span><span style="font-weight:700;color:var(--green)">88%</span></div>
+            <div class="bar-track"><div class="bar-fill f-blue" style="width:88%"></div></div>
+          </div>
+          <div class="bar-wrap">
+            <div class="bar-lbl"><span>격식 행사 · 면접</span><span style="font-weight:700;color:var(--orange)">62%</span></div>
+            <div class="bar-track"><div class="bar-fill f-orange" style="width:62%"></div></div>
+          </div>
+          <ul class="fb-list" style="margin-top:6px;">
+            <li class="fb-item"><span class="fb-icon">💡</span>격식 행사엔 타이 추가 시 적합도가 90%↑</li>
+          </ul>
+        </div>
+
+        <!-- 옷 상태 -->
+        <div class="detail-card">
+          <div class="detail-hd">
+            <div class="detail-title">🔍 옷 상태 점검</div>
+            <div class="chip-warn">주의 1건</div>
+          </div>
+          <ul class="fb-list">
+            <li class="fb-item"><span class="fb-icon">⚠️</span>왼쪽 소매 팔꿈치 부위 구김 감지 — 다림질 권장</li>
+            <li class="fb-item"><span class="fb-icon">✅</span>셔츠 단추 전체 정상 채워짐 (7/7)</li>
+            <li class="fb-item"><span class="fb-icon">✅</span>넥타이 매듭 중앙 정렬 · 길이 적절</li>
+            <li class="fb-item"><span class="fb-icon">✅</span>깃(collar) 접힘 없이 잘 펴져 있어요</li>
+            <li class="fb-item"><span class="fb-icon">✅</span>보풀·오염 없음 — 양호한 상태</li>
+          </ul>
+        </div>
+
+        <!-- 날씨 연동 신발 추천 -->
+        <div class="weather-card">
+          <div class="weather-header">
+            <div class="weather-title">🌤️ 날씨 맞춤 신발 추천</div>
+          </div>
+          <div class="weather-now">
+            <span>☀️</span>
+            <div class="weather-now-info">
+              <p class="temp">28°C</p>
+              <p class="desc">맑음 · 습도 62% · 강수확률 5%</p>
+            </div>
+          </div>
+          <div class="shoe-list">
+            <div class="shoe-item">
+              <div class="shoe-rank">1</div>
+              <div class="shoe-icon">👞</div>
+              <div class="shoe-info">
+                <p class="shoe-name">브라운 더비슈즈</p>
+                <p class="shoe-reason">맑음 + 브라운 벨트와 완벽 매치</p>
+              </div>
+            </div>
+            <div class="shoe-item">
+              <div class="shoe-rank">2</div>
+              <div class="shoe-icon">🥿</div>
+              <div class="shoe-info">
+                <p class="shoe-name">네이비 로퍼</p>
+                <p class="shoe-reason">색 연결 자연스럽고 통기성 좋음</p>
+              </div>
+            </div>
+            <div class="shoe-item" style="opacity:.6;">
+              <div class="shoe-rank" style="background:#AAA;">✕</div>
+              <div class="shoe-icon">🥾</div>
+              <div class="shoe-info">
+                <p class="shoe-name">워커 · 부츠</p>
+                <p class="shoe-reason">고온 다습 — 통기성 부족, 비추천</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 액션 -->
+        <div class="action-row">
+          <button class="btn-primary" style="font-size:15px;padding:14px;">🔊 음성으로 듣기</button>
+          <button class="btn-gold">저장</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab"><span class="icon">🏠</span><span class="label">홈</span></div>
+      <div class="tab active"><span class="icon">📷</span><span class="label">분석</span></div>
+      <div class="tab"><span class="icon">👗</span><span class="label">옷장</span></div>
+      <div class="tab"><span class="icon">⚙️</span><span class="label">설정</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━ SCREEN 4: 접근성 설정 ━━━━━━━━━━━━━━ -->
+<div>
+  <p class="screen-label">④ 접근성 · 프로필 설정</p>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="status-bar">
+        <span class="time">8:40</span>
+        <span>🔋</span>
+      </div>
+
+      <div class="acc-header">
+        <h2>접근성 · 프로필</h2>
+        <p>나에게 맞는 방식으로<br>AI 코치를 사용하세요</p>
+        <!-- 사용자 프로필 칩 -->
+        <div class="profile-chips">
+          <button class="profile-chip off">👴 고령자 모드</button>
+          <button class="profile-chip on">👁️ 저시력</button>
+          <button class="profile-chip off">🤝 손 떨림</button>
+          <button class="profile-chip off">🎨 색약</button>
+        </div>
+      </div>
+
+      <!-- 음성 -->
+      <div class="acc-sec">
+        <p class="acc-sec-title">음성 · 피드백</p>
+
+        <div class="acc-item">
+          <div class="acc-icon">🔊</div>
+          <div class="acc-info">
+            <p class="acc-name">음성 안내 (TTS)</p>
+            <p class="acc-desc">분석 결과·추천을 음성으로 읽어드림</p>
+          </div>
+          <button class="toggle on"></button>
+        </div>
+
+        <div class="acc-item">
+          <div class="acc-icon">🐢</div>
+          <div class="acc-info">
+            <p class="acc-name">말하기 속도</p>
+            <div class="range-wrap">
+              <span style="font-size:11px;color:var(--sub);">느리게</span>
+              <input type="range" class="range-slider" min="1" max="10" value="6">
+              <span style="font-size:11px;color:var(--sub);">빠르게</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item">
+          <div class="acc-icon">📳</div>
+          <div class="acc-info">
+            <p class="acc-name">진동 피드백</p>
+            <p class="acc-desc">문제 발견 시 진동으로 알림</p>
+          </div>
+          <button class="toggle on"></button>
+        </div>
+      </div>
+
+      <!-- 시각 -->
+      <div class="acc-sec" style="margin-top:6px;">
+        <p class="acc-sec-title">시각 보조</p>
+
+        <div class="acc-item">
+          <div class="acc-icon">🔍</div>
+          <div class="acc-info">
+            <p class="acc-name">큰 글씨 모드</p>
+            <p class="acc-desc">텍스트 1.4배 확대, 간격 넓힘</p>
+          </div>
+          <button class="toggle on"></button>
+        </div>
+
+        <div class="acc-item">
+          <div class="acc-icon">🎨</div>
+          <div class="acc-info">
+            <p class="acc-name">색약 보조 필터</p>
+            <p class="acc-desc">색 조합 설명을 텍스트 이름으로 표시</p>
+          </div>
+          <button class="select-pill">적록색맹 ▾</button>
+        </div>
+
+        <div class="acc-item">
+          <div class="acc-icon">🌙</div>
+          <div class="acc-info">
+            <p class="acc-name">고대비 모드</p>
+            <p class="acc-desc">배경·텍스트 대비 강화</p>
+          </div>
+          <button class="toggle off"></button>
+        </div>
+      </div>
+
+      <!-- 카메라 -->
+      <div class="acc-sec" style="margin-top:6px;">
+        <p class="acc-sec-title">카메라 · 촬영</p>
+
+        <div class="acc-item">
+          <div class="acc-icon">⏱️</div>
+          <div class="acc-info">
+            <p class="acc-name">자동 촬영</p>
+            <p class="acc-desc">전신 감지 후 3초 뒤 자동 촬영</p>
+          </div>
+          <button class="toggle on"></button>
+        </div>
+
+        <div class="acc-item">
+          <div class="acc-icon">🤝</div>
+          <div class="acc-info">
+            <p class="acc-name">손 떨림 보정</p>
+            <p class="acc-desc">안정적인 이미지 캡처 모드</p>
+          </div>
+          <button class="toggle off"></button>
+        </div>
+
+        <div class="acc-item">
+          <div class="acc-icon">💬</div>
+          <div class="acc-info">
+            <p class="acc-name">음성 명령 촬영</p>
+            <p class="acc-desc">"찍어줘"라고 말하면 자동 촬영</p>
+          </div>
+          <button class="toggle on"></button>
+        </div>
+      </div>
+
+      <!-- TPO 즐겨찾기 -->
+      <div class="acc-sec" style="margin-top:6px;">
+        <p class="acc-sec-title">자주 쓰는 TPO 상황</p>
+        <div class="acc-item" style="flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%;">
+            <button class="profile-chip on" style="font-size:12px;background:var(--blue);color:#FFF;">💼 출근</button>
+            <button class="profile-chip on" style="font-size:12px;background:var(--blue);color:#FFF;">📝 면접</button>
+            <button class="profile-chip off" style="font-size:12px;background:#EEF1F8;color:var(--sub);">💕 소개팅</button>
+            <button class="profile-chip off" style="font-size:12px;background:#EEF1F8;color:var(--sub);">🎉 파티</button>
+            <button class="profile-chip off" style="font-size:12px;background:#EEF1F8;color:var(--sub);">⛳ 야외</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:16px;margin-bottom:8px;">
+        <button class="btn-primary">설정 저장</button>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab"><span class="icon">🏠</span><span class="label">홈</span></div>
+      <div class="tab"><span class="icon">📷</span><span class="label">분석</span></div>
+      <div class="tab"><span class="icon">👗</span><span class="label">옷장</span></div>
+      <div class="tab active"><span class="icon">⚙️</span><span class="label">설정</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
